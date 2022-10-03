@@ -1,0 +1,103 @@
+body {
+  font-family: "courier";
+  font-weight: bold;
+}
+
+/* https://stackoverflow.com/questions/826782/how-to-disable-text-selection-highlighting */
+.no-select {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Old versions of Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox */
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  width: fit-content;
+}
+
+.header {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  background-color: lightgrey;
+  border: 3px solid grey;
+  border-bottom: 2px solid grey;
+}
+
+.board {
+  background-color: gray;
+}
+.counter {
+  display: flex;
+  background-color: maroon;
+  color: red;
+  justify-content: center;
+  align-items: center;
+  width: 60px;
+}
+
+.center {
+  background-color: lightgray;
+  text-align: center;
+  width: 32px;
+  cursor: pointer;
+}
+
+.cell {
+  background-color: lightgray;
+  border: 1px grey;
+  min-height: 21px;
+  min-width: 21px;
+  height: 21px;
+  width: 21px;
+  text-align: center;
+  cursor: default;
+}
+
+.one {
+  color: blue;
+}
+
+.two {
+  color: green;
+}
+
+.three {
+  color: red;
+}
+
+.four {
+  color: purple;
+}
+
+.five {
+  color: maroon;
+}
+
+.six {
+  color: turquoise;
+}
+
+.seven {
+  color: black;
+}
+
+.eight {
+  color: gray;
+}
+
+.flagged {
+  font-size: 12px;
+}
+
+.clicked {
+  background-color: rgb(189, 189, 189);
+}
+
+.clicked.mine {
+  background-color: red;
+}
