@@ -699,6 +699,8 @@ dependencies = [
  "gloo-console",
  "log",
  "rand",
+ "wasm-bindgen",
  "wasm-logger",
+ "web-sys",
  "yew",
 ]

@@ -1,9 +1,9 @@
 use cell::Cell;
-use yew::*;
+use yew::{html, Component, Context, Html, classes};
+use web_sys::MouseEvent;
 use gloo_console as console;
 use gloo::timers::callback::Interval;
 use rand::Rng;
-use yew::html::Scope;
 use std::collections::HashSet;
 
 mod cell;
@@ -48,21 +48,98 @@ struct App {
 }
 
 impl App {
-    fn reset(&mut self) {
-        let (cells, _) = generate_cells(self.cells_width, self.cells_height, self.mines.len());
-        self.reassign_cells(&cells);
-        self.seconds_played = 0;
+    fn reset_interval(&mut self, ctx: &Context<Self>) {
+        let callback = ctx.link().callback(|_| Msg::Tick);
+        let interval = Interval::new(1000, move || callback.emit(()));
+        self.interval = Some(interval);
     }
 
-    fn reassign_cells(&mut self, cells: &Vec<Cell>) {
+    fn reset(&mut self) {
+        console::log!("Resetting...");
+        self.active = true;
+        self.face = Face::Happy;
+        self.seconds_played = 0;
+        self.shown_cells_count = 0;
+        self.reassign_cells(None);
+    }
+
+    fn reassign_cells(&mut self, index: Option<usize>) {
+        let (cells, mines) = self.generate_cells(index);
         for (index, cell) in cells.iter().enumerate() {
             self.cells[index] = *cell;
         }
+        for (index, mine) in mines.iter().enumerate() {
+            self.mines[index] = *mine;
+        }
+    }
+
+    fn generate_cells(&self, index: Option<usize>) -> (Vec<Cell>, Vec<usize>) {
+        let mut cells: Vec<Cell> = Vec::new();
+        let mut mines: Vec<usize> = Vec::new();
+        let mut mine_indicies: HashSet<usize> = HashSet::new();
+        for _ in 0..self.mines.len() {
+            let mut i = self.get_random_cell_index();
+            let current_index_matches = if let Some(crnt_index) = index { crnt_index == i } else { false };
+
+            while current_index_matches || mine_indicies.contains(&i) {
+                i = self.get_random_cell_index();
+            }
+            mine_indicies.insert(i);
+        }
+
+        let cells_count = self.cells_width * self.cells_height;
+        for index in 0..cells_count {
+            let (row, col) = self.get_row_col_from_index(index);
+            let neighbors = self.neighbors(row, col);
+            let value = Cell::calculate_value(index, &neighbors, &mine_indicies);
+            let cell = Cell::new(value);
+
+            if mine_indicies.contains(&index) { mines.push(index); }
+            cells.push(cell);
+        }
+
+        (cells, mines)
+    }
+
+
+    fn neighbors(&self, row: usize, col: usize) -> HashSet<usize> {
+        let mut neighbors: HashSet<usize> = HashSet::new();
+
+        if let Some(n) = self.get_index_from_row_col(row - 1, col - 1) { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(row - 1, col) { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(row - 1, col + 1) { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(row, col - 1) { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(row, col + 1) { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(row + 1, col - 1) { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(row + 1, col) { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(row + 1, col + 1) { neighbors.insert(n); }
+
+        neighbors
+    }
+
+    fn get_random_cell_index(&self) -> usize {
+        let mut rng = rand::thread_rng();
+        rng.gen_range(0..(self.cells_width * self.cells_height))
+    }
+
+    fn get_index_from_row_col(&self, row: usize, col: usize) -> Option<usize> {
+        if row < self.cells_height && col < self.cells_width {
+            Some(row * self.cells_width + col)
+        } else {
+            None
+        }
+    }
+
+    fn get_row_col_from_index(&self, index: usize) -> (usize, usize) {
+        let row = index / self.cells_height;
+        let col = index % self.cells_width;
+
+        (row as usize, col as usize)
     }
 
     fn click_neighboring_empty_cells(&mut self, index: usize) {
-        let (row, col) = get_row_col_from_index(index, self.cells_width, self.cells_height);
-        let neighbors = neighbors(row, col, self.cells_width, self.cells_height);
+        let (row, col) = self.get_row_col_from_index(index);
+        let neighbors = self.neighbors(row, col);
         for index in neighbors.iter() {
             self.handle_click(*index, None);
         }
@@ -72,21 +149,30 @@ impl App {
         self.cells.iter().filter(|cell| cell.is_flagged()).count()
     }
 
-    fn view_cell(&self, index: usize, cell: &Cell, link: &Scope<Self>) -> Html {
-        let is_shown = {
-            if cell.is_shown() { "clicked" } else { "" }
+    fn view_cell(&self, index: usize, cell: &Cell, ctx: &Context<Self>) -> Html {
+        let link = ctx.link();
+        let value = cell.get_value_display_string();
+        let is_shown = cell.is_shown();
+        let shown = {
+            if is_shown { "clicked" } else { "" }
         };
-        let is_mine = {
-            if cell.is_mine() { "mine" } else { "" }
+        let mine = {
+            if is_shown && cell.is_mine() { "mine" } else { "" }
         };
-        let value = cell.get_value_string();
+        let color = {
+            cell.value.get_name_string()
+        };
 
         html! {
-            <td key={index}
-                class={classes!("cell", is_shown, is_mine)}
-                onclick={link.callback(move |_| Msg::Click(index))}
+            <td key={ index }
+                class={ classes!("cell", shown, mine, color) }
+                onclick={ link.callback(move |_| Msg::Click(index)) }
+                oncontextmenu={ link.callback(move |e: MouseEvent| {
+                    e.prevent_default();
+                    Msg::RightClick(index)
+                }) }
             >
-                {value}
+                { value }
             </td>
         }
     }
@@ -102,24 +188,21 @@ impl App {
     }
 
     fn handle_reset(&mut self) -> bool {
-        self.active = true;
-        self.face = Face::Happy;
         self.reset();
-        console::log!("Resetting...");
         true
     }
 
-    fn handle_click(&mut self, index: usize, _ctx: Option<&Context<Self>>) -> bool {
+    fn handle_click(&mut self, index: usize, ctx: Option<&Context<Self>>) -> bool {
         if !self.active { return false; }
 
         if self.interval.is_none() {
-            let callback = _ctx.unwrap().link().callback(|_| Msg::Tick);
-            let interval = Interval::new(1000, move || callback.emit(()));
-            self.interval = Some(interval);
+            self.reassign_cells(Some(index));
+            self.reset_interval(ctx.unwrap());
         }
 
         let mut cell = self.cells[index];
-        if cell.is_shown() { return false; }
+        if cell.is_shown() || cell.is_flagged() { return false; }
+
         cell.handle_click();
         self.cells[index] = cell; // Need to reassign cell or its changes aren't saved
 
@@ -139,14 +222,17 @@ impl App {
         true
     }
 
-    fn handle_right_click(&self, index: usize) -> bool {
+    fn handle_right_click(&mut self, index: usize) -> bool {
+        if !self.active { return false; }
+
         let mut cell = self.cells[index];
         cell.cycle_display();
+        self.cells[index] = cell;
+        self.face = Face::Happy;
         true
     }
 
     fn check_for_win(&mut self) {
-        console::log!("shown_cells, mines, total_cells: ", self.shown_cells_count, self.mines.len(), self.cells.len());
         if self.shown_cells_count + self.mines.len() == self.cells.len() {
             self.handle_win();
         }
@@ -163,7 +249,6 @@ impl App {
     fn flag_all_mines(&mut self) {
         for index in &self.mines {
             let mut mine = self.cells[*index];
-            console::log!("flaggin mine at index: ", *index);
             mine.set_display_to_flagged();
             self.cells[*index] = mine;
         }
@@ -183,7 +268,8 @@ impl Component for App {
         let shown_cells_count   = 0;
         let seconds_played      = 0;
 
-        let (cells, mines) = generate_cells(cells_width, cells_height, mines_count);
+        let cells = vec![Cell::new_empty(); cells_width * cells_height];
+        let mines = vec![0; mines_count];
 
         console::log!("Done");
         Self {
@@ -205,7 +291,6 @@ impl Component for App {
                 self.handle_mouse_down()
             }
             Msg::Tick => {
-                console::log!("ticking");
                 self.handle_tick()
             },
             Msg::Reset => {
@@ -234,7 +319,7 @@ impl Component for App {
                 let row_cells = cells
                     .iter()
                     .enumerate()
-                    .map(|(x, cell)| self.view_cell(index_offset + x, cell, ctx.link()));
+                    .map(|(x, cell)| self.view_cell(index_offset + x, cell, ctx));
                 html! {
                     <tr key={y} class="game-row">
                         { for row_cells }
@@ -262,83 +347,13 @@ impl Component for App {
                     </table>
                 </div>
 
-                // <script type="text/javascript">
-                //     // Disabling right click
-                //     document.oncontextmenu = function(event) { event.preventDefault(); };
-
-                //     window.game = new Game();
-                //     selectChanged()
-
-                //     function selectChanged() {
-                //         var difficulty = document.getElementById("difficulty").value;
-                //         game.setup(difficulty);
-                //     }
-                // </script>
+                <script type="text/javascript">
+                    // Disabling right click
+                    {"document.oncontextmenu = function(event) { event.preventDefault(); };"}
+                </script>
             </>
         }
     }
-}
-
-fn generate_cells(cells_width: usize, cells_height: usize, mines_count: usize) -> (Vec<Cell>, Vec<usize>) {
-    let mut cells: Vec<Cell> = Vec::new();
-    let mut mines: Vec<usize> = Vec::new();
-    let mut mine_indicies: HashSet<usize> = HashSet::new();
-    for _ in 0..mines_count {
-        let mut i = get_random_cell_index(cells_width, cells_height);
-
-        while mine_indicies.contains(&i) {
-            i = get_random_cell_index(cells_width, cells_height);
-        }
-        mine_indicies.insert(i);
-    }
-
-    let cells_count = cells_width * cells_height;
-    for index in 0..cells_count {
-        let (row, col) = get_row_col_from_index(index, cells_width, cells_height);
-        let neighbors = neighbors(row, col, cells_width, cells_height);
-        let value = Cell::calculate_value(index, &neighbors, &mine_indicies);
-        let cell = Cell::new(value);
-
-        if mine_indicies.contains(&index) { mines.push(index); }
-        cells.push(cell);
-    }
-
-    (cells, mines)
-}
-
-fn get_random_cell_index(cells_width: usize, cells_height: usize) -> usize {
-    let mut rng = rand::thread_rng();
-    rng.gen_range(0..(cells_width * cells_height))
-}
-
-fn neighbors(row: usize, col: usize, cells_width: usize, cells_height: usize) -> HashSet<usize> {
-    let mut neighbors: HashSet<usize> = HashSet::new();
-
-    if let Some(n) = get_index_from_row_col(row - 1, col - 1, cells_width, cells_height) { neighbors.insert(n); }
-    if let Some(n) = get_index_from_row_col(row - 1, col, cells_width, cells_height) { neighbors.insert(n); }
-    if let Some(n) = get_index_from_row_col(row - 1, col + 1, cells_width, cells_height) { neighbors.insert(n); }
-    if let Some(n) = get_index_from_row_col(row, col - 1, cells_width, cells_height) { neighbors.insert(n); }
-    if let Some(n) = get_index_from_row_col(row, col + 1, cells_width, cells_height) { neighbors.insert(n); }
-    if let Some(n) = get_index_from_row_col(row + 1, col - 1, cells_width, cells_height) { neighbors.insert(n); }
-    if let Some(n) = get_index_from_row_col(row + 1, col, cells_width, cells_height) { neighbors.insert(n); }
-    if let Some(n) = get_index_from_row_col(row + 1, col + 1, cells_width, cells_height) { neighbors.insert(n); }
-
-    neighbors
-}
-
-fn get_index_from_row_col(row: usize, col: usize, cells_width: usize, cells_height: usize) -> Option<usize> {
-    if row < cells_height && col < cells_width {
-        Some(row * cells_width + col)
-    } else {
-        None
-    }
-}
-
-fn get_row_col_from_index(index: usize, cells_width: usize, cells_height: usize) -> (usize, usize) {
-    let row = index / cells_height;
-    let col = index % cells_width;
-
-    (row as usize, col as usize)
 }
 
 fn main() {

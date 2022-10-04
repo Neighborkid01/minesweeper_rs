@@ -1,7 +1,7 @@
 use std::collections::HashSet;
-use gloo_console as console;
+// use gloo_console as console;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Value {
     Mine,
     Zero,
@@ -15,12 +15,53 @@ pub enum Value {
     Eight,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+impl Value {
+    pub fn get_name_string(&self) -> String {
+        match self {
+            Value::Mine     => String::from(""),
+            Value::Zero     => String::from(""),
+            Value::One      => String::from("one"),
+            Value::Two      => String::from("two"),
+            Value::Three    => String::from("three"),
+            Value::Four     => String::from("four"),
+            Value::Five     => String::from("five"),
+            Value::Six      => String::from("six"),
+            Value::Seven    => String::from("seven"),
+            Value::Eight    => String::from("eight"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DisplayState {
     Default,
     Unknown,
     Flagged,
-    Shown,
+    Shown(Value),
+}
+
+impl DisplayState {
+    pub fn get_display_string(&self) -> &str {
+        match self {
+            DisplayState::Default => " ",
+            DisplayState::Flagged => "🚩",
+            DisplayState::Unknown => "?",
+            DisplayState::Shown(value) => {
+                match value {
+                    Value::Mine     => "*",
+                    Value::Zero     => " ",
+                    Value::One      => "1",
+                    Value::Two      => "2",
+                    Value::Three    => "3",
+                    Value::Four     => "4",
+                    Value::Five     => "5",
+                    Value::Six      => "6",
+                    Value::Seven    => "7",
+                    Value::Eight    => "8",
+                }
+            }
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -37,14 +78,16 @@ impl Cell {
         }
     }
 
+    pub fn new_empty() -> Self {
+        Cell::new(Value::Zero)
+    }
+
     pub fn handle_click(&mut self) {
         match self.display {
+            DisplayState::Flagged | DisplayState::Shown(_) => {},
             DisplayState::Default | DisplayState::Unknown => {
-                self.display = DisplayState::Shown;
+                self.set_display(DisplayState::Shown(self.value));
             },
-            DisplayState::Flagged | DisplayState::Shown => {
-                self.display = self.display;
-            }
         }
     }
 
@@ -53,12 +96,12 @@ impl Cell {
             DisplayState::Default => { self.set_display(DisplayState::Flagged) }
             DisplayState::Flagged => { self.set_display(DisplayState::Unknown) }
             DisplayState::Unknown => { self.set_display(DisplayState::Default) }
-            DisplayState::Shown   => { self.set_display(DisplayState::Shown) }
+            DisplayState::Shown(value) => { self.set_display(DisplayState::Shown(value)) }
         }
     }
 
     pub fn is_shown(&self) -> bool {
-        self.display == DisplayState::Shown
+        self.display == DisplayState::Shown(self.value)
     }
 
     pub fn is_mine(&self) -> bool {
@@ -71,10 +114,6 @@ impl Cell {
 
     pub fn is_zero(&self) -> bool {
         self.value == Value::Zero
-    }
-
-    pub fn set_value(&mut self, value: Value) {
-        self.value = value;
     }
 
     pub fn set_display(&mut self, display: DisplayState) {
@@ -99,30 +138,11 @@ impl Cell {
             6 => { Value::Six },
             7 => { Value::Seven },
             8 => { Value::Eight },
-            _ => panic!(),
+            _ => panic!("Unexpected number of neighbors: {}", neighboring_mines),
         }
     }
 
-    pub fn get_value_string(&self) -> &str {
-        let res = match self.display {
-            DisplayState::Default => " ",
-            DisplayState::Flagged => "🚩",
-            DisplayState::Unknown => "?",
-            DisplayState::Shown => {
-                match self.value {
-                    Value::Mine => "*",
-                    Value::Zero => " ",
-                    Value::One => "1",
-                    Value::Two => "2",
-                    Value::Three => "3",
-                    Value::Four => "4",
-                    Value::Five => "5",
-                    Value::Six => "6",
-                    Value::Seven => "7",
-                    Value::Eight => "8",
-                }
-            }
-        };
-        return res;
+    pub fn get_value_display_string(&self) -> &str {
+        self.display.get_display_string()
     }
 }
