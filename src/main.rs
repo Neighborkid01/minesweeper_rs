@@ -1,4 +1,5 @@
 use cell::Cell;
+use face::Face;
 use yew::{html, Component, Context, Html, classes};
 use web_sys::MouseEvent;
 use gloo_console as console;
@@ -7,6 +8,7 @@ use rand::Rng;
 use std::collections::HashSet;
 
 mod cell;
+mod face;
 
 enum Msg {
     Tick,
@@ -15,24 +17,6 @@ enum Msg {
     RightClick(usize),
     // Chord(usize),
     Reset,
-}
-
-enum Face {
-    Happy,
-    Nervous,
-    Dead,
-    Cool,
-}
-
-impl Face {
-    fn as_str(&self) -> &'static str {
-        match self {
-            Face::Happy     => "🙂",
-            Face::Nervous   => "😬",
-            Face::Dead      => "😵",
-            Face::Cool      => "😎",
-        }
-    }
 }
 
 struct App {
