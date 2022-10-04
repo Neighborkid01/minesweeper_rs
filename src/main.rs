@@ -39,7 +39,7 @@ struct App {
     active:                 bool,
     face:                   Face,
     cells:                  Vec<Cell>,
-    mines:                  Vec<Cell>,
+    mines:                  Vec<usize>,
     cells_width:            usize,
     cells_height:           usize,
     shown_cells_count:      usize,
@@ -64,7 +64,6 @@ impl App {
         let (row, col) = get_row_col_from_index(index, self.cells_width, self.cells_height);
         let neighbors = neighbors(row, col, self.cells_width, self.cells_height);
         for index in neighbors.iter() {
-            console::log!("clicking index:", *index);
             self.handle_click(*index, None);
         }
     }
@@ -127,7 +126,6 @@ impl App {
         if cell.is_mine() {
             self.active = false;
             self.face = Face::Dead;
-            // self.interval.as_ref().unwrap().cancel();
             self.interval = None;
         } else {
             self.face = Face::Happy;
@@ -148,23 +146,26 @@ impl App {
     }
 
     fn check_for_win(&mut self) {
+        console::log!("shown_cells, mines, total_cells: ", self.shown_cells_count, self.mines.len(), self.cells.len());
         if self.shown_cells_count + self.mines.len() == self.cells.len() {
             self.handle_win();
         }
     }
 
     fn handle_win(&mut self) {
+        console::log!("you won!");
         self.active = false;
         self.face = Face::Cool;
-        // self.interval.unwrap().cancel();
-        self.interval = None;
         self.flag_all_mines();
+        self.interval = None;
     }
 
-    fn flag_all_mines(&self) {
-        for i in 0..self.mines.len() {
-            let mut mine = self.mines[i];
+    fn flag_all_mines(&mut self) {
+        for index in &self.mines {
+            let mut mine = self.cells[*index];
+            console::log!("flaggin mine at index: ", *index);
             mine.set_display_to_flagged();
+            self.cells[*index] = mine;
         }
     }
 
@@ -278,9 +279,9 @@ impl Component for App {
     }
 }
 
-fn generate_cells(cells_width: usize, cells_height: usize, mines_count: usize) -> (Vec<Cell>, Vec<Cell>) {
+fn generate_cells(cells_width: usize, cells_height: usize, mines_count: usize) -> (Vec<Cell>, Vec<usize>) {
     let mut cells: Vec<Cell> = Vec::new();
-    let mut mines: Vec<Cell> = Vec::new();
+    let mut mines: Vec<usize> = Vec::new();
     let mut mine_indicies: HashSet<usize> = HashSet::new();
     for _ in 0..mines_count {
         let mut i = get_random_cell_index(cells_width, cells_height);
@@ -289,7 +290,6 @@ fn generate_cells(cells_width: usize, cells_height: usize, mines_count: usize) -
             i = get_random_cell_index(cells_width, cells_height);
         }
         mine_indicies.insert(i);
-        console::log!(i);
     }
 
     let cells_count = cells_width * cells_height;
@@ -299,7 +299,7 @@ fn generate_cells(cells_width: usize, cells_height: usize, mines_count: usize) -
         let value = Cell::calculate_value(index, &neighbors, &mine_indicies);
         let cell = Cell::new(value);
 
-        if mine_indicies.contains(&index) { mines.push(cell); }
+        if mine_indicies.contains(&index) { mines.push(index); }
         cells.push(cell);
     }
 

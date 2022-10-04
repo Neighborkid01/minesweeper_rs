@@ -46,8 +46,6 @@ impl Cell {
                 self.display = self.display;
             }
         }
-        // console::log!("in handle_click, shown: {}", self.shown);
-        // console::log!("in handle_click, val_str: {}", self.get_value_string());
     }
 
     pub fn cycle_display(&mut self) {
