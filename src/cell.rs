@@ -37,10 +37,6 @@ impl Cell {
         }
     }
 
-    // pub fn new_empty() -> Self {
-    //     Cell::new(Value::Zero)
-    // }
-
     pub fn handle_click(&mut self) {
         match self.display {
             DisplayState::Default | DisplayState::Unknown => {
@@ -71,12 +67,24 @@ impl Cell {
         self.value == Value::Mine
     }
 
+    pub fn is_flagged(&self) -> bool {
+        self.display == DisplayState::Flagged
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.value == Value::Zero
+    }
+
     pub fn set_value(&mut self, value: Value) {
         self.value = value;
     }
 
     pub fn set_display(&mut self, display: DisplayState) {
         self.display = display;
+    }
+
+    pub fn set_display_to_flagged(&mut self) {
+        self.set_display(DisplayState::Flagged);
     }
 
     pub fn calculate_value(index: usize, neighbors: &HashSet<usize>, mines: &HashSet<usize>) -> Value {
