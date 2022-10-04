@@ -185,7 +185,10 @@ impl App {
         }
 
         let mut cell = self.cells[index];
-        if cell.is_shown() || cell.is_flagged() { return false; }
+        if cell.is_shown() || cell.is_flagged() {
+            self.face = Face::Happy;
+            return true;
+        }
 
         cell.handle_click();
         self.cells[index] = cell; // Need to reassign cell or its changes aren't saved
@@ -312,30 +315,23 @@ impl Component for App {
             });
 
         html! {
-            <>
-                <div class="container no-select">
-                    <div class="header">
-                        <div id="minesRemainingContainer" class="counter left">
-                            <span id="minesRemaining">{ mines_remaining }</span>
-                        </div>
-                        <div id="resetButtonContainer" class="center">
-                            <span id="resetButton" onclick={ctx.link().callback(move |_| Msg::Reset)}>{ self.face.as_str() }</span>
-                        </div>
-                        <div id="timerContainer" class="counter right">
-                            <span id="timer">{ self.seconds_played }</span>
-                        </div>
+            <div class="container no-select">
+                <div class="header">
+                    <div id="minesRemainingContainer" class="counter left">
+                        <span id="minesRemaining">{ mines_remaining }</span>
                     </div>
-
-                    <table id="board" class="board" onmousedown={ctx.link().callback(move |_| Msg::MouseDown)}>
-                        { for cell_rows }
-                    </table>
+                    <div id="resetButtonContainer" class="center">
+                        <span id="resetButton" onclick={ctx.link().callback(move |_| Msg::Reset)}>{ self.face.as_str() }</span>
+                    </div>
+                    <div id="timerContainer" class="counter right">
+                        <span id="timer">{ self.seconds_played }</span>
+                    </div>
                 </div>
 
-                <script type="text/javascript">
-                    // Disabling right click
-                    {"document.oncontextmenu = function(event) { event.preventDefault(); };"}
-                </script>
-            </>
+                <table id="board" class="board" onmousedown={ctx.link().callback(move |_| Msg::MouseDown)}>
+                    { for cell_rows }
+                </table>
+            </div>
         }
     }
 }
