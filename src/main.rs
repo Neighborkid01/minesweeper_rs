@@ -40,14 +40,13 @@ impl App {
 
     fn reset(&mut self) {
         console::log!("Resetting...");
-        self.active = true;
         self.face = Face::Happy;
         self.seconds_played = 0;
         self.shown_cells_count = 0;
-        self.reassign_cells(None);
+        self.active = true;
     }
 
-    fn reassign_cells(&mut self, index: Option<usize>) {
+    fn reassign_cells(&mut self, index: usize) {
         let (cells, mines) = self.generate_cells(index);
         for (index, cell) in cells.iter().enumerate() {
             self.cells[index] = *cell;
@@ -57,15 +56,13 @@ impl App {
         }
     }
 
-    fn generate_cells(&self, index: Option<usize>) -> (Vec<Cell>, Vec<usize>) {
+    fn generate_cells(&self, index: usize) -> (Vec<Cell>, Vec<usize>) {
         let mut cells: Vec<Cell> = Vec::new();
         let mut mines: Vec<usize> = Vec::new();
         let mut mine_indicies: HashSet<usize> = HashSet::new();
         for _ in 0..self.mines.len() {
             let mut i = self.get_random_cell_index();
-            let current_index_matches = if let Some(crnt_index) = index { crnt_index == i } else { false };
-
-            while current_index_matches || mine_indicies.contains(&i) {
+            while index == i || mine_indicies.contains(&i) {
                 i = self.get_random_cell_index();
             }
             mine_indicies.insert(i);
@@ -144,7 +141,8 @@ impl App {
             if is_shown && cell.is_mine() { "mine" } else { "" }
         };
         let color = {
-            cell.value.get_name_string()
+            // This has to be a String instead of &str because the enum lifetime and cell's lifetime are different or something
+            if is_shown { cell.value.get_name_string() } else { String::from("") }
         };
 
         html! {
@@ -180,7 +178,7 @@ impl App {
         if !self.active { return false; }
 
         if self.interval.is_none() {
-            self.reassign_cells(Some(index));
+            self.reassign_cells(index);
             self.reset_interval(ctx.unwrap());
         }
 
