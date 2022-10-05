@@ -12,7 +12,7 @@ mod face;
 
 enum Msg {
     Tick,
-    MouseDown,
+    MouseDown(usize),
     Click(usize),
     RightClick(usize),
     // Chord(usize),
@@ -27,6 +27,7 @@ struct App {
     cells_width:            usize,
     cells_height:           usize,
     shown_cells_count:      usize,
+    selected_cell_index:    usize,
     seconds_played:         usize,
     interval:               Option<Interval>,
 }
@@ -143,6 +144,13 @@ impl App {
         }
     }
 
+    fn click_all_mines(&mut self, ctx: Option<&Context<Self>>) {
+        for i in 0..self.mines.len() {
+            let index = self.mines[i];
+            self.handle_click(index, ctx);
+        }
+    }
+
     fn count_flagged_mines(&self) -> usize {
         self.cells.iter().filter(|cell| cell.is_flagged()).count()
     }
@@ -151,7 +159,7 @@ impl App {
         self.interval.is_none()
     }
 
-    fn view_cell(&self, index: usize, cell: &Cell, ctx: &Context<Self>) -> Html {
+    fn view_cell(&self, index: usize, selected_cell_index: usize, cell: &Cell, ctx: &Context<Self>) -> Html {
         let link = ctx.link();
         let value = cell.get_value_display_string();
         let is_shown = cell.is_shown();
@@ -159,9 +167,9 @@ impl App {
         // This has to be a String instead of &str because the enum lifetime and cell's lifetime are different or something
         let color = { if is_shown { cell.value.get_name_string() } else { String::from("") } };
         let shown = { if is_shown { "clicked" } else { "" } };
-        let mine  = { if is_shown && cell.is_mine() { "mine" } else { "" } };
+        let mine  = { if is_shown && cell.is_mine() && index == selected_cell_index { "mine" } else { "" } };
 
-        let on_mouse_down   = link.callback(move |_| Msg::MouseDown);
+        let on_mouse_down   = link.callback(move |_| Msg::MouseDown(index));
         let on_mouse_up     = link.callback(move |_| Msg::Click(index));
         let on_context_menu = link.callback(move |e: MouseEvent| {
             e.prevent_default();
@@ -180,8 +188,10 @@ impl App {
         }
     }
 
-    fn handle_mouse_down(&mut self) -> bool {
-        if self.active { self.face = Face::Nervous; }
+    fn handle_mouse_down(&mut self, index: usize) -> bool {
+        if !self.active { return false; }
+        self.face = Face::Nervous;
+        self.selected_cell_index = index;
         true
     }
 
@@ -213,6 +223,12 @@ impl App {
         self.cells[index] = cell; // Need to reassign cell or its changes aren't saved
 
         if cell.is_mine() {
+            if index == self.selected_cell_index {
+                self.click_all_mines(ctx);
+            } else {
+                console::log!("returning false");
+                return false;
+            }
             self.active = false;
             self.face = Face::Dead;
             self.interval = None;
@@ -268,10 +284,11 @@ impl Component for App {
 
     fn create(_ctx: &Context<Self>) -> Self {
         console::log!("Building app...");
-        let cells_width         = 10;
-        let cells_height        = 10;
+        let cells_width         = 9;
+        let cells_height        = 9;
         let mines_count         = 10;
         let shown_cells_count   = 0;
+        let selected_cell_index = 0;
         let seconds_played      = 0;
 
         let cells = vec![Cell::new_empty(); cells_width * cells_height];
@@ -286,6 +303,7 @@ impl Component for App {
             cells_width,
             cells_height,
             shown_cells_count,
+            selected_cell_index,
             seconds_played,
             interval: None,
         }
@@ -293,8 +311,8 @@ impl Component for App {
 
     fn update(&mut self, _ctx: &Context<Self>, msg: Msg) -> bool {
         match msg {
-            Msg::MouseDown => {
-                self.handle_mouse_down()
+            Msg::MouseDown(index) => {
+                self.handle_mouse_down(index)
             }
             Msg::Tick => {
                 self.handle_tick()
@@ -325,7 +343,7 @@ impl Component for App {
                 let row_cells = cells
                     .iter()
                     .enumerate()
-                    .map(|(x, cell)| self.view_cell(index_offset + x, cell, ctx));
+                    .map(|(x, cell)| self.view_cell(index_offset + x, self.selected_cell_index, cell, ctx));
                 html! {
                     <tr key={y} class="game-row">
                         { for row_cells }

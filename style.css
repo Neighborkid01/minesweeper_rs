@@ -50,10 +50,10 @@ body {
 .cell {
   background-color: lightgray;
   border: 1px grey;
-  min-height: 21px;
-  min-width: 21px;
-  height: 21px;
-  width: 21px;
+  min-height: 26px;
+  min-width: 26px;
+  height: 26px;
+  width: 26px;
   text-align: center;
   cursor: default;
 }
