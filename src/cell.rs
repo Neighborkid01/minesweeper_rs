@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 // use gloo_console as console;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -71,7 +70,9 @@ pub struct Cell {
 }
 
 impl Cell {
-    pub fn new(value: Value) -> Self {
+    pub fn new(neighboring_mines: Option<usize>) -> Self {
+        let value = Cell::calculate_value(neighboring_mines);
+
         Self {
             value,
             display: DisplayState::Default,
@@ -79,7 +80,11 @@ impl Cell {
     }
 
     pub fn new_empty() -> Self {
-        Cell::new(Value::Zero)
+        Cell::new(Some(0))
+    }
+
+    pub fn reset_value(&mut self) {
+        self.set_value(Value::Zero);
     }
 
     pub fn handle_click(&mut self) {
@@ -116,19 +121,27 @@ impl Cell {
         self.value == Value::Zero
     }
 
-    pub fn set_display(&mut self, display: DisplayState) {
-        self.display = display;
-    }
 
     pub fn set_display_to_flagged(&mut self) {
         self.set_display(DisplayState::Flagged);
     }
 
-    pub fn calculate_value(index: usize, neighbors: &HashSet<usize>, mines: &HashSet<usize>) -> Value {
-        if mines.contains(&index) { return Value::Mine }
+    pub fn get_value_display_string(&self) -> &str {
+        self.display.get_display_string()
+    }
 
-        let neighboring_mines = neighbors.intersection(&mines).count();
-        match neighboring_mines {
+    // Private methods
+    fn set_display(&mut self, display: DisplayState) {
+        self.display = display;
+    }
+
+    fn set_value(&mut self, value: Value) {
+        self.value = value;
+    }
+
+    fn calculate_value(neighboring_mines: Option<usize>) -> Value {
+        if neighboring_mines.is_none() { return Value::Mine; }
+        match neighboring_mines.unwrap() {
             0 => { Value::Zero },
             1 => { Value::One },
             2 => { Value::Two },
@@ -138,11 +151,7 @@ impl Cell {
             6 => { Value::Six },
             7 => { Value::Seven },
             8 => { Value::Eight },
-            _ => panic!("Unexpected number of neighbors: {}", neighboring_mines),
+            _ => panic!("Unexpected number of neighbors: {}", neighboring_mines.unwrap()),
         }
-    }
-
-    pub fn get_value_display_string(&self) -> &str {
-        self.display.get_display_string()
     }
 }

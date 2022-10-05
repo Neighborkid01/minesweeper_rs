@@ -43,6 +43,7 @@ impl App {
         self.face = Face::Happy;
         self.seconds_played = 0;
         self.shown_cells_count = 0;
+        self.clear_cells();
         self.active = true;
     }
 
@@ -53,6 +54,17 @@ impl App {
         }
         for (index, mine) in mines.iter().enumerate() {
             self.mines[index] = *mine;
+        }
+    }
+
+    fn clear_cells(&mut self) {
+        for index in 0..self.cells.len() {
+            let mut cell = self.cells[index];
+            cell.reset_value();
+            self.cells[index] = cell;
+        }
+        for index in 0..self.mines.len() {
+            self.mines[index] = 0;
         }
     }
 
@@ -71,9 +83,13 @@ impl App {
         let cells_count = self.cells_width * self.cells_height;
         for index in 0..cells_count {
             let (row, col) = self.get_row_col_from_index(index);
-            let neighbors = self.neighbors(row, col);
-            let value = Cell::calculate_value(index, &neighbors, &mine_indicies);
-            let cell = Cell::new(value);
+            let neighboring_mines = if mine_indicies.contains(&index) {
+                None
+            } else {
+                let neighbors = self.neighbors(row, col);
+                Some(neighbors.intersection(&mine_indicies).count())
+            };
+            let cell = Cell::new(neighboring_mines);
 
             if mine_indicies.contains(&index) { mines.push(index); }
             cells.push(cell);
@@ -134,25 +150,25 @@ impl App {
         let link = ctx.link();
         let value = cell.get_value_display_string();
         let is_shown = cell.is_shown();
-        let shown = {
-            if is_shown { "clicked" } else { "" }
-        };
-        let mine = {
-            if is_shown && cell.is_mine() { "mine" } else { "" }
-        };
-        let color = {
-            // This has to be a String instead of &str because the enum lifetime and cell's lifetime are different or something
-            if is_shown { cell.value.get_name_string() } else { String::from("") }
-        };
+
+        // This has to be a String instead of &str because the enum lifetime and cell's lifetime are different or something
+        let color = { if is_shown { cell.value.get_name_string() } else { String::from("") } };
+        let shown = { if is_shown { "clicked" } else { "" } };
+        let mine  = { if is_shown && cell.is_mine() { "mine" } else { "" } };
+
+        let on_mouse_down   = link.callback(move |_| Msg::MouseDown);
+        let on_mouse_up     = link.callback(move |_| Msg::Click(index));
+        let on_context_menu = link.callback(move |e: MouseEvent| {
+            e.prevent_default();
+            Msg::RightClick(index)
+        });
 
         html! {
             <td key={ index }
                 class={ classes!("cell", shown, mine, color) }
-                onclick={ link.callback(move |_| Msg::Click(index)) }
-                oncontextmenu={ link.callback(move |e: MouseEvent| {
-                    e.prevent_default();
-                    Msg::RightClick(index)
-                }) }
+                onmousedown={ on_mouse_down }
+                onmouseup={ on_mouse_up }
+                oncontextmenu={ on_context_menu }
             >
                 { value }
             </td>
@@ -178,6 +194,7 @@ impl App {
         if !self.active { return false; }
 
         if self.interval.is_none() {
+            console::log!("Resetting from click...");
             self.reassign_cells(index);
             self.reset_interval(ctx.unwrap());
         }
@@ -326,7 +343,7 @@ impl Component for App {
                     </div>
                 </div>
 
-                <table id="board" class="board" onmousedown={ctx.link().callback(move |_| Msg::MouseDown)}>
+                <table id="board" class="board">
                     { for cell_rows }
                 </table>
             </div>
