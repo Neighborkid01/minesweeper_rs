@@ -83,8 +83,9 @@ impl Cell {
         Cell::new(Some(0))
     }
 
-    pub fn reset_value(&mut self) {
+    pub fn reset(&mut self) {
         self.set_value(Value::Zero);
+        self.set_display(DisplayState::Default);
     }
 
     pub fn handle_click(&mut self) {

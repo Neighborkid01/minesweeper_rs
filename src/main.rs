@@ -40,6 +40,7 @@ impl App {
 
     fn reset(&mut self) {
         console::log!("Resetting...");
+        self.interval = None;
         self.face = Face::Happy;
         self.seconds_played = 0;
         self.shown_cells_count = 0;
@@ -60,7 +61,7 @@ impl App {
     fn clear_cells(&mut self) {
         for index in 0..self.cells.len() {
             let mut cell = self.cells[index];
-            cell.reset_value();
+            cell.reset();
             self.cells[index] = cell;
         }
         for index in 0..self.mines.len() {
@@ -146,6 +147,10 @@ impl App {
         self.cells.iter().filter(|cell| cell.is_flagged()).count()
     }
 
+    fn game_in_proggress(&self) -> bool {
+        self.interval.is_none()
+    }
+
     fn view_cell(&self, index: usize, cell: &Cell, ctx: &Context<Self>) -> Html {
         let link = ctx.link();
         let value = cell.get_value_display_string();
@@ -193,8 +198,7 @@ impl App {
     fn handle_click(&mut self, index: usize, ctx: Option<&Context<Self>>) -> bool {
         if !self.active { return false; }
 
-        if self.interval.is_none() {
-            console::log!("Resetting from click...");
+        if self.game_in_proggress() {
             self.reassign_cells(index);
             self.reset_interval(ctx.unwrap());
         }
