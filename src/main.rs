@@ -103,15 +103,17 @@ impl App {
 
     fn neighbors(&self, row: usize, col: usize) -> HashSet<usize> {
         let mut neighbors: HashSet<usize> = HashSet::new();
+        let r = row as isize;
+        let c = col as isize;
 
-        if let Some(n) = self.get_index_from_row_col(row - 1, col - 1) { neighbors.insert(n); }
-        if let Some(n) = self.get_index_from_row_col(row - 1, col) { neighbors.insert(n); }
-        if let Some(n) = self.get_index_from_row_col(row - 1, col + 1) { neighbors.insert(n); }
-        if let Some(n) = self.get_index_from_row_col(row, col - 1) { neighbors.insert(n); }
-        if let Some(n) = self.get_index_from_row_col(row, col + 1) { neighbors.insert(n); }
-        if let Some(n) = self.get_index_from_row_col(row + 1, col - 1) { neighbors.insert(n); }
-        if let Some(n) = self.get_index_from_row_col(row + 1, col) { neighbors.insert(n); }
-        if let Some(n) = self.get_index_from_row_col(row + 1, col + 1) { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(r - 1, c - 1) { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(r - 1, c) { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(r - 1, c + 1) { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(r, c - 1) { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(r, c + 1) { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(r + 1, c - 1) { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(r + 1, c) { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(r + 1, c + 1) { neighbors.insert(n); }
 
         neighbors
     }
@@ -121,9 +123,10 @@ impl App {
         rng.gen_range(0..(self.cells_width * self.cells_height))
     }
 
-    fn get_index_from_row_col(&self, row: usize, col: usize) -> Option<usize> {
-        if row < self.cells_height && col < self.cells_width {
-            Some(row * self.cells_width + col)
+    fn get_index_from_row_col(&self, row: isize, col: isize) -> Option<usize> {
+        if row >= 0 && (row as usize) < self.cells_height &&
+           col >= 0 && (col as usize) < self.cells_width {
+            Some((row as usize * self.cells_width) + col as usize)
         } else {
             None
         }
