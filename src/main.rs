@@ -82,7 +82,7 @@ impl App {
             mine_indicies.insert(i);
         }
 
-        let cells_count = self.cells_width * self.cells_height;
+        let cells_count = self.cells.len();
         for index in 0..cells_count {
             let (row, col) = self.get_row_col_from_index(index);
             let neighboring_mines = if mine_indicies.contains(&index) {
@@ -133,7 +133,7 @@ impl App {
     }
 
     fn get_row_col_from_index(&self, index: usize) -> (usize, usize) {
-        let row = index / self.cells_height;
+        let row = index / self.cells_width;
         let col = index % self.cells_width;
 
         (row as usize, col as usize)
@@ -287,9 +287,9 @@ impl Component for App {
 
     fn create(_ctx: &Context<Self>) -> Self {
         console::log!("Building app...");
-        let cells_width         = 9;
-        let cells_height        = 9;
-        let mines_count         = 10;
+        let cells_width         = 32;
+        let cells_height        = 16;
+        let mines_count         = 99;
         let shown_cells_count   = 0;
         let selected_cell_index = 0;
         let seconds_played      = 0;
@@ -358,13 +358,13 @@ impl Component for App {
             <div class="container no-select">
                 <div class="header">
                     <div id="minesRemainingContainer" class="counter left">
-                        <span id="minesRemaining">{ mines_remaining }</span>
+                        <span id="minesRemaining">{ format!("{:0>3}", mines_remaining)  }</span>
                     </div>
                     <div id="resetButtonContainer" class="center">
                         <span id="resetButton" onclick={ctx.link().callback(move |_| Msg::Reset)}>{ self.face.as_str() }</span>
                     </div>
                     <div id="timerContainer" class="counter right">
-                        <span id="timer">{ self.seconds_played }</span>
+                        <span id="timer">{ format!("{:0>3}", self.seconds_played) }</span>
                     </div>
                 </div>
 

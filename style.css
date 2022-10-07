@@ -22,10 +22,14 @@ body {
 .header {
   display: flex;
   flex-direction: row;
-  justify-content: center;
+  justify-content: space-between;
   background-color: lightgrey;
   border: 3px solid grey;
   border-bottom: 2px solid grey;
+}
+
+.header > div {
+  font-size: x-large;
 }
 
 .board {
@@ -33,17 +37,19 @@ body {
 }
 .counter {
   display: flex;
-  background-color: maroon;
+  background-color: black;
   color: red;
   justify-content: center;
   align-items: center;
-  width: 60px;
+  margin: 5px;
+  padding: 0 4px;
 }
 
 .center {
+  display: flex;
+  align-items: center;
   background-color: lightgray;
   text-align: center;
-  width: 32px;
   cursor: pointer;
 }
 
