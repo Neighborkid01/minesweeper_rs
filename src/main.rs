@@ -215,7 +215,6 @@ impl App {
         let new_mouse_state = self.mouse_state.mouse_up(event);
         match self.mouse_state {
             MouseState::Neither => {
-                self.selected_cell_index = None;
                 self.mouse_state = new_mouse_state;
                 true
             },
@@ -257,7 +256,6 @@ impl App {
         let mut cell = self.cells[index];
         if cell.is_shown() || cell.is_flagged() {
             self.face = Face::Happy;
-            self.selected_cell_index = None;
             return true;
         }
 
@@ -266,7 +264,6 @@ impl App {
 
         if cell.is_mine() {
             if self.selected_cell_index.is_none() || index != self.selected_cell_index.unwrap() {
-                self.selected_cell_index = None;
                 return false;
             } else {
                 console::console_dbg!(self.selected_cell_index);
@@ -284,7 +281,6 @@ impl App {
         if cell.is_zero() { self.click_neighboring_empty_cells(index); }
 
         self.check_for_win();
-        self.selected_cell_index = None;
         true
     }
 
@@ -415,6 +411,12 @@ impl Component for App {
                     { for cell_rows }
                 </table>
             </div>
+        }
+    }
+
+    fn rendered(&mut self, _ctx: &Context<Self>, _: bool) {
+        if self.mouse_state.is_neither() {
+            self.selected_cell_index = None;
         }
     }
 }

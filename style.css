@@ -70,6 +70,9 @@ table {
 }
 
 .cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   background-color: lightgrey;
   min-height: 21px;
   min-width: 21px;
