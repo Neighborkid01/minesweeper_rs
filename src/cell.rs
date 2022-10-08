@@ -63,7 +63,7 @@ impl DisplayState {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Cell {
     pub value: Value,
     pub display: DisplayState,

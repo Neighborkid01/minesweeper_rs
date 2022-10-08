@@ -1,8 +1,9 @@
 use cell::Cell;
 use face::Face;
 use mouse_state::MouseState;
+use wasm_bindgen::JsCast;
 use yew::{html, Component, Context, Html, classes};
-use web_sys::MouseEvent;
+use web_sys::{Element, MouseEvent};
 use gloo_console as console;
 use gloo::timers::callback::Interval;
 use rand::Rng;
@@ -16,8 +17,10 @@ enum Msg {
     Tick,
     MouseDown(usize, MouseEvent),
     MouseUp(usize, MouseEvent),
+    MouseMove(MouseEvent),
     Reset,
     Ignore,
+    ForceRender,
 }
 
 struct App {
@@ -86,11 +89,10 @@ impl App {
 
         let cells_count = self.cells.len();
         for index in 0..cells_count {
-            let (row, col) = self.get_row_col_from_index(index);
             let neighboring_mines = if mine_indicies.contains(&index) {
                 None
             } else {
-                let neighbors = self.neighbors(row, col);
+                let neighbors = self.neighbors(index);
                 Some(neighbors.intersection(&mine_indicies).count())
             };
             let cell = Cell::new(neighboring_mines);
@@ -103,7 +105,8 @@ impl App {
     }
 
 
-    fn neighbors(&self, row: usize, col: usize) -> HashSet<usize> {
+    fn neighbors(&self, index: usize) -> HashSet<usize> {
+        let (row, col) = self.get_row_col_from_index(index);
         let mut neighbors: HashSet<usize> = HashSet::new();
         let r = row as isize;
         let c = col as isize;
@@ -141,14 +144,18 @@ impl App {
         (row as usize, col as usize)
     }
 
-    fn neighbors_selected_cell(&self, current_index: usize) -> bool {
+    fn neighbors_selected_cell(&self, index: usize) -> bool {
+        if self.selected_cell_index.is_none() { return false; }
 
-        false
+        let selected_index = self.selected_cell_index.unwrap();
+        if index == selected_index { return true; }
+
+        let neigbors = self.neighbors(selected_index);
+        neigbors.contains(&index)
     }
 
     fn click_neighboring_empty_cells(&mut self, index: usize) {
-        let (row, col) = self.get_row_col_from_index(index);
-        let neighbors = self.neighbors(row, col);
+        let neighbors = self.neighbors(index);
         for index in neighbors.iter() {
             self.handle_click(*index, None);
         }
@@ -179,7 +186,7 @@ impl App {
         // This has to be a String instead of &str because the enum lifetime and cell's lifetime are different or something
         let color = { if is_shown { cell.value.get_name_string() } else { String::from("") } };
         let mine  = { if is_shown && cell.is_mine() && is_selected_index { "mine" } else { "" } };
-        let shown = { if is_shown || is_selected_index || is_chording { "clicked" } else { "" } };
+        let shown = { if is_shown || (is_selected_index && !cell.is_flagged()) || is_chording { "clicked" } else { "" } };
 
         let onmousedown = link.callback(move |e: MouseEvent| Msg::MouseDown(index, e));
         let onmouseup   = link.callback(move |e: MouseEvent| Msg::MouseUp(index, e));
@@ -198,28 +205,29 @@ impl App {
         self.mouse_state = self.mouse_state.mouse_down(event);
         self.face = Face::Nervous;
 
-        let mut should_render = false;
-        if self.mouse_state.is_left() {
-            self.selected_cell_index = Some(index);
-            should_render = true;
+        match self.mouse_state {
+            MouseState::Left | MouseState::Both => {
+                self.selected_cell_index = Some(index);
+                true
+            },
+            MouseState::Right => { self.handle_right_click(index) },
+            MouseState::AfterBoth | MouseState::Neither => { false }
         }
-        if self.mouse_state.is_right() {
-            should_render = self.handle_right_click(index)
-        }
-
-        should_render
     }
 
     fn handle_mouse_up(&mut self, index: usize, event: MouseEvent, ctx: Option<&Context<Self>>) -> bool {
         if !self.active { return  false; }
         let new_mouse_state = self.mouse_state.mouse_up(event);
         match self.mouse_state {
-            MouseState::Neither => {
+            MouseState::AfterBoth | MouseState::Neither => {
                 self.mouse_state = new_mouse_state;
                 true
             },
             MouseState::Left => {
                 if new_mouse_state.is_some() { return true; }
+                if self.selected_cell_index.is_none() { return false; }
+                if self.selected_cell_index.unwrap() != index { return true; }
+
                 self.mouse_state = new_mouse_state;
                 self.handle_click(index, ctx)
             },
@@ -228,11 +236,30 @@ impl App {
                 false
             },
             MouseState::Both => {
-                self.handle_chord(index);
+                self.handle_chord(index, ctx);
                 self.mouse_state = new_mouse_state;
                 true
             }
         }
+    }
+
+    fn handle_mouse_move(&mut self, event: MouseEvent) -> bool {
+        if self.selected_cell_index.is_none() { return false; }
+        let rect = event
+            .target()
+            .expect("mouse event doesn't have a target")
+            .dyn_into::<Element>()
+            .expect("event target should be of type HtmlElement")
+            .get_bounding_client_rect();
+        let x = (event.client_x() as f64) - rect.left();
+        let y = (event.client_y() as f64) - rect.top();
+
+        if x <= 0.0 || y <= 0.0 {
+            self.selected_cell_index = None;
+            return true;
+        }
+
+        false
     }
 
     fn handle_tick(&mut self) -> bool {
@@ -266,7 +293,6 @@ impl App {
             if self.selected_cell_index.is_none() || index != self.selected_cell_index.unwrap() {
                 return false;
             } else {
-                console::console_dbg!(self.selected_cell_index);
                 self.click_all_mines(ctx);
             }
             self.active = false;
@@ -294,7 +320,18 @@ impl App {
         true
     }
 
-    fn handle_chord(&mut self, index: usize) -> bool {
+    fn handle_chord(&mut self, index: usize, ctx: Option<&Context<Self>>) -> bool {
+        let cell = self.cells[index];
+        if !cell.is_shown() { return false; }
+
+        let neighbors = self.neighbors(index);
+        let neighboring_mines = neighbors.iter().filter(|index| self.cells[**index].is_mine()).count();
+        let neighboring_flags = neighbors.iter().filter(|index| self.cells[**index].is_flagged()).count();
+        if neighboring_mines != neighboring_flags { return false; }
+
+        for index in neighbors {
+            self.handle_click(index, ctx);
+        }
         true
     }
 
@@ -361,6 +398,9 @@ impl Component for App {
             Msg::MouseUp(index, event) => {
                 self.handle_mouse_up(index, event, Some(ctx))
             },
+            Msg::MouseMove(event) => {
+                self.handle_mouse_move(event)
+            }
             Msg::Tick => {
                 self.handle_tick()
             },
@@ -368,7 +408,7 @@ impl Component for App {
                 self.handle_reset()
             },
             Msg::Ignore => { false },
-            // Msg::Chord(_) => todo!(),
+            Msg::ForceRender => { true },
         }
     }
 
@@ -407,16 +447,20 @@ impl Component for App {
                     </div>
                 </div>
 
-                <table id="board" class="board" oncontextmenu={ ctx.link().callback(move |e: MouseEvent| { e.prevent_default(); Msg::Ignore }) }>
+                <table id="board" class="board"
+                    oncontextmenu={ ctx.link().callback(move |e: MouseEvent| { e.prevent_default(); Msg::Ignore }) }
+                    onmousemove={ ctx.link().callback(move |e: MouseEvent| Msg::MouseMove(e))}
+                >
                     { for cell_rows }
                 </table>
             </div>
         }
     }
 
-    fn rendered(&mut self, _ctx: &Context<Self>, _: bool) {
-        if self.mouse_state.is_neither() {
+    fn rendered(&mut self, ctx: &Context<Self>, _: bool) {
+        if self.selected_cell_index.is_some() && self.mouse_state.is_neither() {
             self.selected_cell_index = None;
+            ctx.link().callback(move |_| {Msg::ForceRender}).emit(());
         }
     }
 }

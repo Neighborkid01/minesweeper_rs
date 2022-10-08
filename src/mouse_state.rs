@@ -30,19 +30,12 @@ pub enum MouseState {
     Left,
     Right,
     Both,
+    AfterBoth,
 }
 
 impl MouseState {
     pub fn is_neither(self) -> bool {
         self == Self::Neither
-    }
-
-    pub fn is_left(self) -> bool {
-        self == Self::Left
-    }
-
-    pub fn is_right(self) -> bool {
-        self == Self::Right
     }
 
     pub fn is_both(self) -> bool {
@@ -75,7 +68,7 @@ impl MouseState {
                     _ => { Self::Right },
                 }
             },
-            Self::Both => { Self::Both },
+            Self::Both | Self::AfterBoth => { Self::Both },
         }
     }
 
@@ -84,11 +77,11 @@ impl MouseState {
         match self {
             Self::Both => {
                 match button {
-                    MouseButton::Left => { Self::Right },
-                    MouseButton::Right => { Self::Left },
+                    MouseButton::Left | MouseButton::Right => { Self::AfterBoth },
                     _ => { Self::Both },
                 }
             },
+            Self::AfterBoth => { Self::Neither },
             Self::Left => {
                 match button {
                     MouseButton::Left => { Self::Neither },
