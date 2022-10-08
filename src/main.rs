@@ -1,5 +1,6 @@
 use cell::Cell;
 use face::Face;
+use mouse_state::MouseState;
 use yew::{html, Component, Context, Html, classes};
 use web_sys::MouseEvent;
 use gloo_console as console;
@@ -9,14 +10,14 @@ use std::collections::HashSet;
 
 mod cell;
 mod face;
+mod mouse_state;
 
 enum Msg {
     Tick,
-    MouseDown(usize),
-    Click(usize),
-    RightClick(usize),
-    // Chord(usize),
+    MouseDown(usize, MouseEvent),
+    MouseUp(usize, MouseEvent),
     Reset,
+    Ignore,
 }
 
 struct App {
@@ -27,8 +28,9 @@ struct App {
     cells_width:            usize,
     cells_height:           usize,
     shown_cells_count:      usize,
-    selected_cell_index:    usize,
+    selected_cell_index:    Option<usize>,
     seconds_played:         usize,
+    mouse_state:            MouseState,
     interval:               Option<Interval>,
 }
 
@@ -139,6 +141,11 @@ impl App {
         (row as usize, col as usize)
     }
 
+    fn neighbors_selected_cell(&self, current_index: usize) -> bool {
+
+        false
+    }
+
     fn click_neighboring_empty_cells(&mut self, index: usize) {
         let (row, col) = self.get_row_col_from_index(index);
         let neighbors = self.neighbors(row, col);
@@ -158,44 +165,75 @@ impl App {
         self.cells.iter().filter(|cell| cell.is_flagged()).count()
     }
 
-    fn game_in_proggress(&self) -> bool {
+    fn no_game_in_proggress(&self) -> bool {
         self.interval.is_none()
     }
 
-    fn view_cell(&self, index: usize, selected_cell_index: usize, cell: &Cell, ctx: &Context<Self>) -> Html {
+    fn view_cell(&self, index: usize, cell: &Cell, ctx: &Context<Self>) -> Html {
         let link = ctx.link();
         let value = cell.get_value_display_string();
         let is_shown = cell.is_shown();
+        let is_selected_index = self.selected_cell_index.is_some() && index == self.selected_cell_index.unwrap();
+        let is_chording = self.mouse_state.is_both() && self.neighbors_selected_cell(index);
 
         // This has to be a String instead of &str because the enum lifetime and cell's lifetime are different or something
         let color = { if is_shown { cell.value.get_name_string() } else { String::from("") } };
-        let shown = { if is_shown { "clicked" } else { "" } };
-        let mine  = { if is_shown && cell.is_mine() && index == selected_cell_index { "mine" } else { "" } };
+        let mine  = { if is_shown && cell.is_mine() && is_selected_index { "mine" } else { "" } };
+        let shown = { if is_shown || is_selected_index || is_chording { "clicked" } else { "" } };
 
-        let on_mouse_down   = link.callback(move |_| Msg::MouseDown(index));
-        let on_mouse_up     = link.callback(move |_| Msg::Click(index));
-        let on_context_menu = link.callback(move |e: MouseEvent| {
-            e.prevent_default();
-            Msg::RightClick(index)
-        });
+        let onmousedown = link.callback(move |e: MouseEvent| Msg::MouseDown(index, e));
+        let onmouseup   = link.callback(move |e: MouseEvent| Msg::MouseUp(index, e));
 
         html! {
-            <td key={ index }
-                class={ classes!("cell", shown, mine, color) }
-                onmousedown={ on_mouse_down }
-                onmouseup={ on_mouse_up }
-                oncontextmenu={ on_context_menu }
+            <td key={index}
+                class={classes!("cell-border")} {onmousedown} {onmouseup}
             >
-                { value }
+                <div class={classes!("cell", shown, mine, color)}>{value}</div>
             </td>
         }
     }
 
-    fn handle_mouse_down(&mut self, index: usize) -> bool {
+    fn handle_mouse_down(&mut self, index: usize, event: MouseEvent) -> bool {
         if !self.active { return false; }
+        self.mouse_state = self.mouse_state.mouse_down(event);
         self.face = Face::Nervous;
-        self.selected_cell_index = index;
-        true
+
+        let mut should_render = false;
+        if self.mouse_state.is_left() {
+            self.selected_cell_index = Some(index);
+            should_render = true;
+        }
+        if self.mouse_state.is_right() {
+            should_render = self.handle_right_click(index)
+        }
+
+        should_render
+    }
+
+    fn handle_mouse_up(&mut self, index: usize, event: MouseEvent, ctx: Option<&Context<Self>>) -> bool {
+        if !self.active { return  false; }
+        let new_mouse_state = self.mouse_state.mouse_up(event);
+        match self.mouse_state {
+            MouseState::Neither => {
+                self.selected_cell_index = None;
+                self.mouse_state = new_mouse_state;
+                true
+            },
+            MouseState::Left => {
+                if new_mouse_state.is_some() { return true; }
+                self.mouse_state = new_mouse_state;
+                self.handle_click(index, ctx)
+            },
+            MouseState::Right => {
+                self.mouse_state = new_mouse_state;
+                false
+            },
+            MouseState::Both => {
+                self.handle_chord(index);
+                self.mouse_state = new_mouse_state;
+                true
+            }
+        }
     }
 
     fn handle_tick(&mut self) -> bool {
@@ -211,7 +249,7 @@ impl App {
     fn handle_click(&mut self, index: usize, ctx: Option<&Context<Self>>) -> bool {
         if !self.active { return false; }
 
-        if self.game_in_proggress() {
+        if self.no_game_in_proggress() {
             self.reassign_cells(index);
             self.reset_interval(ctx.unwrap());
         }
@@ -219,6 +257,7 @@ impl App {
         let mut cell = self.cells[index];
         if cell.is_shown() || cell.is_flagged() {
             self.face = Face::Happy;
+            self.selected_cell_index = None;
             return true;
         }
 
@@ -226,11 +265,12 @@ impl App {
         self.cells[index] = cell; // Need to reassign cell or its changes aren't saved
 
         if cell.is_mine() {
-            if index == self.selected_cell_index {
-                self.click_all_mines(ctx);
-            } else {
-                console::log!("returning false");
+            if self.selected_cell_index.is_none() || index != self.selected_cell_index.unwrap() {
+                self.selected_cell_index = None;
                 return false;
+            } else {
+                console::console_dbg!(self.selected_cell_index);
+                self.click_all_mines(ctx);
             }
             self.active = false;
             self.face = Face::Dead;
@@ -244,6 +284,7 @@ impl App {
         if cell.is_zero() { self.click_neighboring_empty_cells(index); }
 
         self.check_for_win();
+        self.selected_cell_index = None;
         true
     }
 
@@ -254,6 +295,10 @@ impl App {
         cell.cycle_display();
         self.cells[index] = cell;
         self.face = Face::Happy;
+        true
+    }
+
+    fn handle_chord(&mut self, index: usize) -> bool {
         true
     }
 
@@ -291,7 +336,6 @@ impl Component for App {
         let cells_height        = 16;
         let mines_count         = 99;
         let shown_cells_count   = 0;
-        let selected_cell_index = 0;
         let seconds_played      = 0;
 
         let cells = vec![Cell::new_empty(); cells_width * cells_height];
@@ -306,29 +350,28 @@ impl Component for App {
             cells_width,
             cells_height,
             shown_cells_count,
-            selected_cell_index,
             seconds_played,
+            selected_cell_index: None,
+            mouse_state: MouseState::Neither,
             interval: None,
         }
     }
 
-    fn update(&mut self, _ctx: &Context<Self>, msg: Msg) -> bool {
+    fn update(&mut self, ctx: &Context<Self>, msg: Msg) -> bool {
         match msg {
-            Msg::MouseDown(index) => {
-                self.handle_mouse_down(index)
-            }
+            Msg::MouseDown(index, event) => {
+                self.handle_mouse_down(index, event)
+            },
+            Msg::MouseUp(index, event) => {
+                self.handle_mouse_up(index, event, Some(ctx))
+            },
             Msg::Tick => {
                 self.handle_tick()
             },
             Msg::Reset => {
                 self.handle_reset()
             },
-            Msg::Click(index) => {
-                self.handle_click(index, Some(_ctx))
-            },
-            Msg::RightClick(index) => {
-                self.handle_right_click(index)
-            },
+            Msg::Ignore => { false },
             // Msg::Chord(_) => todo!(),
         }
     }
@@ -346,7 +389,7 @@ impl Component for App {
                 let row_cells = cells
                     .iter()
                     .enumerate()
-                    .map(|(x, cell)| self.view_cell(index_offset + x, self.selected_cell_index, cell, ctx));
+                    .map(|(x, cell)| self.view_cell(index_offset + x, cell, ctx));
                 html! {
                     <tr key={y} class="game-row">
                         { for row_cells }
@@ -368,7 +411,7 @@ impl Component for App {
                     </div>
                 </div>
 
-                <table id="board" class="board">
+                <table id="board" class="board" oncontextmenu={ ctx.link().callback(move |e: MouseEvent| { e.prevent_default(); Msg::Ignore }) }>
                     { for cell_rows }
                 </table>
             </div>

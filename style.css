@@ -32,8 +32,14 @@ body {
   font-size: x-large;
 }
 
+table {
+  border-spacing: 0px;
+  border: solid 1px grey;
+  border-top: none;
+}
+
 .board {
-  background-color: gray;
+  background-color: grey;
 }
 .counter {
   display: flex;
@@ -48,20 +54,28 @@ body {
 .center {
   display: flex;
   align-items: center;
-  background-color: lightgray;
+  background-color: lightgrey;
   text-align: center;
   cursor: pointer;
 }
 
-.cell {
-  background-color: lightgray;
-  border: 1px grey;
-  min-height: 26px;
-  min-width: 26px;
-  height: 26px;
-  width: 26px;
+.cell-border {
+  background-color: grey;
+  min-height: 21px;
+  min-width: 21px;
+  height: 21px;
+  width: 21px;
   text-align: center;
   cursor: default;
+}
+
+.cell {
+  background-color: lightgrey;
+  min-height: 21px;
+  min-width: 21px;
+  height: 21px;
+  width: 21px;
+  text-align: center;
 }
 
 .one {
@@ -93,7 +107,7 @@ body {
 }
 
 .eight {
-  color: gray;
+  color: grey;
 }
 
 .flagged {
