@@ -224,7 +224,7 @@ impl App {
                 true
             },
             MouseState::Left => {
-                if new_mouse_state.is_some() { return true; }
+                if !new_mouse_state.is_neither() { return true; }
                 if self.selected_cell_index.is_none() { return false; }
                 if self.selected_cell_index.unwrap() != index { return true; }
 
@@ -244,7 +244,7 @@ impl App {
     }
 
     fn handle_mouse_move(&mut self, event: MouseEvent) -> bool {
-        if self.selected_cell_index.is_none() { return false; }
+        if self.selected_cell_index.is_none() || self.mouse_state.is_neither() { return false; }
         let rect = event
             .target()
             .expect("mouse event doesn't have a target")
@@ -264,6 +264,7 @@ impl App {
 
     fn handle_tick(&mut self) -> bool {
         self.seconds_played += 1;
+        if self.seconds_played >= 999 { self.interval = None; }
         true
     }
 
@@ -458,7 +459,7 @@ impl Component for App {
     }
 
     fn rendered(&mut self, ctx: &Context<Self>, _: bool) {
-        if self.selected_cell_index.is_some() && self.mouse_state.is_neither() {
+        if self.selected_cell_index.is_some() && self.mouse_state.is_neither() && self.active {
             self.selected_cell_index = None;
             ctx.link().callback(move |_| {Msg::ForceRender}).emit(());
         }

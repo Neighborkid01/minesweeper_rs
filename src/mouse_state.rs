@@ -42,10 +42,6 @@ impl MouseState {
         self == Self::Both
     }
 
-    pub fn is_some(self) -> bool {
-        !self.is_neither()
-    }
-
     pub fn mouse_down(&self, event: MouseEvent) -> Self {
         let button = event.button().to_mouse_button();
         match self {
