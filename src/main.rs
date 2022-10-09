@@ -1,6 +1,7 @@
 use cell::Cell;
 use face::Face;
 use mouse_state::MouseState;
+use settings::Difficulty;
 use wasm_bindgen::JsCast;
 use yew::{html, Component, Context, Html, classes};
 use web_sys::{Element, MouseEvent};
@@ -12,6 +13,7 @@ use std::collections::HashSet;
 mod cell;
 mod face;
 mod mouse_state;
+mod settings;
 
 enum Msg {
     Tick,
@@ -34,10 +36,20 @@ struct App {
     selected_cell_index:    Option<usize>,
     seconds_played:         usize,
     mouse_state:            MouseState,
+    first_click_is_zero:    bool,
     interval:               Option<Interval>,
 }
 
 impl App {
+    fn get_board_dimensions(difficulty: Difficulty) -> (usize, usize, usize) {
+        match difficulty {
+            Difficulty::Beginner => { (9, 9, 10) },
+            Difficulty::Intermediate => { (16, 16, 40) },
+            Difficulty::Expert => { (32, 16, 99) },
+            Difficulty::Custom(width, height, mines) => { (width, height, mines) },
+        }
+    }
+
     fn reset_interval(&mut self, ctx: &Context<Self>) {
         let callback = ctx.link().callback(|_| Msg::Tick);
         let interval = Interval::new(1000, move || callback.emit(()));
@@ -79,9 +91,10 @@ impl App {
         let mut cells: Vec<Cell> = Vec::new();
         let mut mines: Vec<usize> = Vec::new();
         let mut mine_indicies: HashSet<usize> = HashSet::new();
+        let neighbors = self.neighbors(index);
         for _ in 0..self.mines.len() {
             let mut i = self.get_random_cell_index();
-            while index == i || mine_indicies.contains(&i) {
+            while self.index_check(index, i, &mine_indicies, &neighbors) {
                 i = self.get_random_cell_index();
             }
             mine_indicies.insert(i);
@@ -102,6 +115,13 @@ impl App {
         }
 
         (cells, mines)
+    }
+
+    fn index_check(&self, index: usize, mine_index: usize, mine_indicies: &HashSet<usize>, neighbors: &HashSet<usize>) -> bool {
+        let index_check = index == mine_index || mine_indicies.contains(&mine_index);
+        if !self.first_click_is_zero { return index_check; }
+
+        index_check || neighbors.contains(&mine_index)
     }
 
 
@@ -366,9 +386,8 @@ impl Component for App {
 
     fn create(_ctx: &Context<Self>) -> Self {
         console::log!("Building app...");
-        let cells_width         = 32;
-        let cells_height        = 16;
-        let mines_count         = 99;
+        let (cells_width, cells_height, mines_count) = App::get_board_dimensions(Difficulty::Intermediate);
+        // let (cells_width, cells_height, mines_count) = App::get_board_dimensions(Difficulty::Custom(50, 50, 300));
         let shown_cells_count   = 0;
         let seconds_played      = 0;
 
@@ -387,6 +406,7 @@ impl Component for App {
             seconds_played,
             selected_cell_index: None,
             mouse_state: MouseState::Neither,
+            first_click_is_zero: true,
             interval: None,
         }
     }
