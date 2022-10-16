@@ -1,4 +1,5 @@
 #!/bin/bash
 
 trunk build --release
-cp -R dist/ /var/www/minesweeper/
+rm /var/www/minesweeper/*
+cp -R dist/. /var/www/minesweeper/
