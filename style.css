@@ -19,6 +19,18 @@ body {
   width: fit-content;
 }
 
+.difficulty {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  background-color: lightgrey;
+  border: 1px solid grey;
+}
+
+.highlight {
+  color: blue;
+}
+
 .header {
   display: flex;
   flex-direction: row;
@@ -41,6 +53,7 @@ table {
 .board {
   background-color: grey;
 }
+
 .counter {
   display: flex;
   background-color: black;

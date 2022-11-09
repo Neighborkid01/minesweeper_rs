@@ -1,7 +1,7 @@
 use cell::Cell;
 use face::Face;
 use mouse_state::MouseState;
-use settings::Difficulty;
+use settings::{Difficulty, Settings, Dimensions};
 use wasm_bindgen::JsCast;
 use yew::{html, Component, Context, Html, classes};
 use web_sys::{Element, MouseEvent};
@@ -23,6 +23,7 @@ enum Msg {
     Reset,
     Ignore,
     ForceRender,
+    ChangeSize(Difficulty),
 }
 
 struct App {
@@ -30,26 +31,16 @@ struct App {
     face:                   Face,
     cells:                  Vec<Cell>,
     mines:                  Vec<usize>,
-    cells_width:            usize,
-    cells_height:           usize,
     shown_cells_count:      usize,
     selected_cell_index:    Option<usize>,
     seconds_played:         usize,
     mouse_state:            MouseState,
     first_click_is_zero:    bool,
+    settings:               Settings,
     interval:               Option<Interval>,
 }
 
 impl App {
-    fn get_board_dimensions(difficulty: Difficulty) -> (usize, usize, usize) {
-        match difficulty {
-            Difficulty::Beginner => { (9, 9, 10) },
-            Difficulty::Intermediate => { (16, 16, 40) },
-            Difficulty::Expert => { (32, 16, 99) },
-            Difficulty::Custom(width, height, mines) => { (width, height, mines) },
-        }
-    }
-
     fn reset_interval(&mut self, ctx: &Context<Self>) {
         let callback = ctx.link().callback(|_| Msg::Tick);
         let interval = Interval::new(1000, move || callback.emit(()));
@@ -145,21 +136,21 @@ impl App {
 
     fn get_random_cell_index(&self) -> usize {
         let mut rng = rand::thread_rng();
-        rng.gen_range(0..(self.cells_width * self.cells_height))
+        rng.gen_range(0..(self.settings.dimensions.width * self.settings.dimensions.height))
     }
 
     fn get_index_from_row_col(&self, row: isize, col: isize) -> Option<usize> {
-        if row >= 0 && (row as usize) < self.cells_height &&
-           col >= 0 && (col as usize) < self.cells_width {
-            Some((row as usize * self.cells_width) + col as usize)
+        if row >= 0 && (row as usize) < self.settings.dimensions.height &&
+           col >= 0 && (col as usize) < self.settings.dimensions.width {
+            Some((row as usize * self.settings.dimensions.width) + col as usize)
         } else {
             None
         }
     }
 
     fn get_row_col_from_index(&self, index: usize) -> (usize, usize) {
-        let row = index / self.cells_width;
-        let col = index % self.cells_width;
+        let row = index / self.settings.dimensions.width;
+        let col = index % self.settings.dimensions.width;
 
         (row as usize, col as usize)
     }
@@ -218,6 +209,19 @@ impl App {
                 <div class={classes!("cell", shown, mine, color)}>{value}</div>
             </td>
         }
+    }
+
+    fn check_difficulty_is_eq(&self, difficulty: Difficulty) -> bool {
+        // https://stackoverflow.com/questions/32554285/compare-enums-only-by-variant-not-value
+        std::mem::discriminant(&self.settings.difficulty) == std::mem::discriminant(&difficulty)
+    }
+
+    fn handle_change_size(&mut self, difficulty: Difficulty) -> bool {
+        self.settings = Settings::new(difficulty);
+        self.cells = vec![Cell::new_empty(); self.settings.dimensions.width * self.settings.dimensions.height];
+        self.mines = vec![0; self.settings.dimensions.mines];
+        self.reset();
+        true
     }
 
     fn handle_mouse_down(&mut self, index: usize, event: MouseEvent) -> bool {
@@ -386,13 +390,13 @@ impl Component for App {
 
     fn create(_ctx: &Context<Self>) -> Self {
         console::log!("Building app...");
-        let (cells_width, cells_height, mines_count) = App::get_board_dimensions(Difficulty::Intermediate);
-        // let (cells_width, cells_height, mines_count) = App::get_board_dimensions(Difficulty::Custom(50, 50, 300));
+        let difficulty = Difficulty::Beginner;
+        let settings = Settings::new(difficulty);
         let shown_cells_count   = 0;
         let seconds_played      = 0;
 
-        let cells = vec![Cell::new_empty(); cells_width * cells_height];
-        let mines = vec![0; mines_count];
+        let cells = vec![Cell::new_empty(); settings.dimensions.width * settings.dimensions.height];
+        let mines = vec![0; settings.dimensions.mines];
 
         console::log!("Done");
         Self {
@@ -400,19 +404,21 @@ impl Component for App {
             face: Face::Happy,
             cells,
             mines,
-            cells_width,
-            cells_height,
             shown_cells_count,
             seconds_played,
             selected_cell_index: None,
             mouse_state: MouseState::Neither,
             first_click_is_zero: true,
+            settings,
             interval: None,
         }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Msg) -> bool {
         match msg {
+            Msg::ChangeSize(difficulty) => {
+                self.handle_change_size(difficulty)
+            },
             Msg::MouseDown(index, event) => {
                 self.handle_mouse_down(index, event)
             },
@@ -437,11 +443,16 @@ impl Component for App {
         let flagged_mines_count = self.count_flagged_mines() as isize;
         let mines_remaining = self.mines.len() as isize - flagged_mines_count;
 
+        let highlight_beginner = if self.check_difficulty_is_eq(Difficulty::Beginner) { "highlight" } else { "" };
+        let highlight_intermediate = if self.check_difficulty_is_eq(Difficulty::Intermediate) { "highlight" } else { "" };
+        let highlight_expert = if self.check_difficulty_is_eq(Difficulty::Expert) { "highlight" } else { "" };
+        let highlight_custom = if self.check_difficulty_is_eq(Difficulty::Custom(Dimensions { width: 0, height: 0, mines: 0 })) { "highlight" } else { "" }; // The specific dimensions don't matter here
+
         let cell_rows = self.cells
-            .chunks(self.cells_width)
+            .chunks(self.settings.dimensions.width)
             .enumerate()
             .map(|(y, cells)| {
-                let index_offset = y * self.cells_width;
+                let index_offset = y * self.settings.dimensions.width;
 
                 let row_cells = cells
                     .iter()
@@ -456,6 +467,29 @@ impl Component for App {
 
         html! {
             <div class="container no-select">
+                <div class="settings">
+                    <a class={classes!("difficulty", highlight_beginner)}
+                       onclick={ctx.link().callback(move |_| Msg::ChangeSize(Difficulty::Beginner))}
+                    >
+                        { "Beginner" }
+                    </a>
+                    <a class={classes!("difficulty", highlight_intermediate)}
+                       onclick={ctx.link().callback(move |_| Msg::ChangeSize(Difficulty::Intermediate))}
+                    >
+                        { "Intermediate" }
+                    </a>
+                    <a class={classes!("difficulty", highlight_expert)}
+                       onclick={ctx.link().callback(move |_| Msg::ChangeSize(Difficulty::Expert))}
+                    >
+                        { "Expert" }
+                    </a>
+                    <a class={classes!("difficulty", highlight_custom)}
+                       onclick={ctx.link().callback(move |_| Msg::ChangeSize(Difficulty::Custom(Dimensions::new(32, 32, 250))))}
+                    >
+                        { "Custom" }
+                    </a>
+                </div>
+
                 <div class="header">
                     <div id="minesRemainingContainer" class="counter left">
                         <span id="minesRemaining">{ format!("{:0>3}", mines_remaining)  }</span>
