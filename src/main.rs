@@ -30,6 +30,7 @@ struct App {
     active:                 bool,
     face:                   Face,
     cells:                  Vec<Cell>,
+    neighbors:              Vec<HashSet<usize>>,
     mines:                  Vec<usize>,
     shown_cells_count:      usize,
     selected_cell_index:    Option<usize>,
@@ -58,9 +59,12 @@ impl App {
     }
 
     fn reassign_cells(&mut self, index: usize) {
-        let (cells, mines) = self.generate_cells(index);
+        let (cells, neighbors, mines) = self.generate_cells(index);
         for (index, cell) in cells.iter().enumerate() {
             self.cells[index] = *cell;
+        }
+        for (index, neighbor) in neighbors.iter().enumerate() {
+            self.neighbors[index] = neighbor.clone();
         }
         for (index, mine) in mines.iter().enumerate() {
             self.mines[index] = *mine;
@@ -78,34 +82,34 @@ impl App {
         }
     }
 
-    fn generate_cells(&self, index: usize) -> (Vec<Cell>, Vec<usize>) {
+    fn generate_cells(&self, index: usize) -> (Vec<Cell>, Vec<HashSet<usize>>, Vec<usize>) {
         let mut cells: Vec<Cell> = Vec::new();
+        let mut neighbors: Vec<HashSet<usize>> = Vec::new();
         let mut mines: Vec<usize> = Vec::new();
         let mut mine_indicies: HashSet<usize> = HashSet::new();
-        let neighbors = self.neighbors(index);
+        let index_neighbors = self.calculate_neighbors(index);
         for _ in 0..self.mines.len() {
             let mut i = self.get_random_cell_index();
-            while self.index_check(index, i, &mine_indicies, &neighbors) {
+            while self.index_check(index, i, &mine_indicies, &index_neighbors) {
                 i = self.get_random_cell_index();
             }
             mine_indicies.insert(i);
         }
 
-        let cells_count = self.cells.len();
-        for index in 0..cells_count {
-            let neighboring_mines = if mine_indicies.contains(&index) {
+        for cell_index in 0..self.cells.len() {
+            let neighboring_cells = self.calculate_neighbors(cell_index);
+            let neighboring_mines = if mine_indicies.contains(&cell_index) {
                 None
             } else {
-                let neighbors = self.neighbors(index);
-                Some(neighbors.intersection(&mine_indicies).count())
+                Some(neighboring_cells.intersection(&mine_indicies).count())
             };
             let cell = Cell::new(neighboring_mines);
-
-            if mine_indicies.contains(&index) { mines.push(index); }
             cells.push(cell);
+            neighbors.push(neighboring_cells);
+            if mine_indicies.contains(&cell_index) { mines.push(cell_index); }
         }
 
-        (cells, mines)
+        (cells, neighbors, mines)
     }
 
     fn index_check(&self, index: usize, mine_index: usize, mine_indicies: &HashSet<usize>, neighbors: &HashSet<usize>) -> bool {
@@ -116,7 +120,7 @@ impl App {
     }
 
 
-    fn neighbors(&self, index: usize) -> HashSet<usize> {
+    fn calculate_neighbors(&self, index: usize) -> HashSet<usize> {
         let (row, col) = self.get_row_col_from_index(index);
         let mut neighbors: HashSet<usize> = HashSet::new();
         let r = row as isize;
@@ -161,14 +165,14 @@ impl App {
         let selected_index = self.selected_cell_index.unwrap();
         if index == selected_index { return true; }
 
-        let neigbors = self.neighbors(selected_index);
+        let neigbors = &self.neighbors[selected_index];
         neigbors.contains(&index)
     }
 
     fn click_neighboring_empty_cells(&mut self, index: usize) {
-        let neighbors = self.neighbors(index);
-        for index in neighbors.iter() {
-            self.handle_click(*index, None);
+        let neighbors = self.neighbors[index].clone();
+        for index in neighbors {
+            self.handle_click(index, None);
         }
     }
 
@@ -219,6 +223,7 @@ impl App {
     fn handle_change_size(&mut self, difficulty: Difficulty) -> bool {
         self.settings = Settings::new(difficulty);
         self.cells = vec![Cell::new_empty(); self.settings.dimensions.width * self.settings.dimensions.height];
+        self.neighbors = vec![HashSet::new(); self.settings.dimensions.width * self.settings.dimensions.height];
         self.mines = vec![0; self.settings.dimensions.mines];
         self.reset();
         true
@@ -349,7 +354,7 @@ impl App {
         let cell = self.cells[index];
         if !cell.is_shown() { return false; }
 
-        let neighbors = self.neighbors(index);
+        let neighbors = self.neighbors[index].clone();
         let neighboring_mines = neighbors.iter().filter(|index| self.cells[**index].is_mine()).count();
         let neighboring_flags = neighbors.iter().filter(|index| self.cells[**index].is_flagged()).count();
         if neighboring_mines != neighboring_flags { return false; }
@@ -396,6 +401,7 @@ impl Component for App {
         let seconds_played      = 0;
 
         let cells = vec![Cell::new_empty(); settings.dimensions.width * settings.dimensions.height];
+        let neighbors = vec![HashSet::new(); settings.dimensions.width * settings.dimensions.height];
         let mines = vec![0; settings.dimensions.mines];
 
         console::log!("Done");
@@ -403,6 +409,7 @@ impl Component for App {
             active: true,
             face: Face::Happy,
             cells,
+            neighbors,
             mines,
             shown_cells_count,
             seconds_played,
