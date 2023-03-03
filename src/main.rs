@@ -509,12 +509,14 @@ impl Component for App {
                     </div>
                 </div>
 
-                <table id="board" class="board"
-                    oncontextmenu={ ctx.link().callback(move |e: MouseEvent| { e.prevent_default(); Msg::Ignore }) }
-                    onmousemove={ ctx.link().callback(move |e: MouseEvent| Msg::MouseMove(e))}
-                >
-                    { for cell_rows }
-                </table>
+                <div class="board-container">
+                    <table id="board" class="board"
+                        oncontextmenu={ ctx.link().callback(move |e: MouseEvent| { e.prevent_default(); Msg::Ignore }) }
+                        onmousemove={ ctx.link().callback(move |e: MouseEvent| Msg::MouseMove(e))}
+                    >
+                        { for cell_rows }
+                    </table>
+                </div>
             </div>
         }
     }
