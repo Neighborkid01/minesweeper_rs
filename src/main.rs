@@ -1,7 +1,7 @@
 use cell::Cell;
 use face::Face;
 use mouse_state::MouseState;
-use settings::{Difficulty, Settings, Dimensions};
+use settings::{Difficulty, Settings, Dimensions, ChordSetting};
 use wasm_bindgen::JsCast;
 use yew::{html, Component, Context, Html, classes};
 use web_sys::{Element, MouseEvent};
@@ -194,14 +194,15 @@ impl App {
     fn view_cell(&self, index: usize, cell: &Cell, ctx: &Context<Self>) -> Html {
         let link = ctx.link();
         let value = cell.get_value_display_string();
-        let is_shown = cell.is_shown();
-        let is_selected_index = self.selected_cell_index.is_some() && index == self.selected_cell_index.unwrap();
-        let is_chording = self.mouse_state.is_both() && self.neighbors_selected_cell(index);
+        let cell_is_shown = cell.is_shown();
+        let cell_at_selected_index_is_shown = self.selected_cell_index.is_some() && self.cells[self.selected_cell_index.unwrap()].is_shown();
+        let cell_is_at_selected_index = self.selected_cell_index.is_some() && index == self.selected_cell_index.unwrap();
+        let state_is_chording = self.mouse_state.is_chording(self.settings.chord_setting, cell_at_selected_index_is_shown) && self.neighbors_selected_cell(index);
 
         // This has to be a String instead of &str because the enum lifetime and cell's lifetime are different or something
-        let color = { if is_shown { cell.value.get_name_string() } else { String::from("") } };
-        let mine  = { if is_shown && cell.is_mine() && is_selected_index { "mine" } else { "" } };
-        let shown = { if is_shown || (is_selected_index && !cell.is_flagged()) || is_chording { "clicked" } else { "" } };
+        let color = { if cell_is_shown { cell.value.get_name_string() } else { String::from("") } };
+        let mine  = { if cell_is_shown && cell.is_mine() && cell_is_at_selected_index { "mine" } else { "" } };
+        let shown = { if !cell.is_flagged() && (cell_is_shown || cell_is_at_selected_index || state_is_chording) { "clicked" } else { "" } };
 
         let onmousedown = link.callback(move |e: MouseEvent| Msg::MouseDown(index, e));
         let onmouseup   = link.callback(move |e: MouseEvent| Msg::MouseUp(index, e));
@@ -220,8 +221,8 @@ impl App {
         std::mem::discriminant(&self.settings.difficulty) == std::mem::discriminant(&difficulty)
     }
 
-    fn handle_change_size(&mut self, difficulty: Difficulty) -> bool {
-        self.settings = Settings::new(difficulty);
+    fn handle_change_size(&mut self, difficulty: Difficulty, chord_setting: ChordSetting) -> bool {
+        self.settings = Settings::new(difficulty, chord_setting);
         self.cells = vec![Cell::new_empty(); self.settings.dimensions.width * self.settings.dimensions.height];
         self.neighbors = vec![HashSet::new(); self.settings.dimensions.width * self.settings.dimensions.height];
         self.mines = vec![0; self.settings.dimensions.mines];
@@ -257,8 +258,17 @@ impl App {
                 if self.selected_cell_index.is_none() { return false; }
                 if self.selected_cell_index.unwrap() != index { return true; }
 
+                let chord_setting = self.settings.chord_setting;
+                let cell_is_shown = self.cells[index].is_shown();
+                let is_chording = self.mouse_state.is_chording(chord_setting, cell_is_shown);
+
                 self.mouse_state = new_mouse_state;
-                self.handle_click(index, ctx)
+                if is_chording {
+                    self.handle_chord(index, ctx);
+                    true
+                } else {
+                    self.handle_click(index, ctx)
+                }
             },
             MouseState::Right => {
                 self.mouse_state = new_mouse_state;
@@ -396,7 +406,8 @@ impl Component for App {
     fn create(_ctx: &Context<Self>) -> Self {
         console::log!("Building app...");
         let difficulty = Difficulty::Beginner;
-        let settings = Settings::new(difficulty);
+        let chord_setting = ChordSetting::LeftClick;
+        let settings = Settings::new(difficulty, chord_setting);
         let shown_cells_count   = 0;
         let seconds_played      = 0;
 
@@ -424,7 +435,7 @@ impl Component for App {
     fn update(&mut self, ctx: &Context<Self>, msg: Msg) -> bool {
         match msg {
             Msg::ChangeSize(difficulty) => {
-                self.handle_change_size(difficulty)
+                self.handle_change_size(difficulty, self.settings.chord_setting)
             },
             Msg::MouseDown(index, event) => {
                 self.handle_mouse_down(index, event)

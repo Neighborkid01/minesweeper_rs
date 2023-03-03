@@ -1,4 +1,5 @@
 use web_sys::MouseEvent;
+use crate::settings::ChordSetting;
 // use gloo_console as console;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -38,8 +39,16 @@ impl MouseState {
         self == Self::Neither
     }
 
-    pub fn is_both(self) -> bool {
-        self == Self::Both
+    // pub fn is_both(self) -> bool {
+    //     self == Self::Both
+    // }
+
+    pub fn is_chording(self, chord_setting: ChordSetting, cell_is_shown: bool) -> bool{
+        match self {
+            Self::Left => { cell_is_shown && chord_setting == ChordSetting::LeftClick },
+            Self::Both => { true },
+            _ => { false },
+        }
     }
 
     pub fn mouse_down(&self, event: MouseEvent) -> Self {

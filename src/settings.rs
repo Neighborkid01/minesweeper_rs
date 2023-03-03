@@ -38,17 +38,26 @@ impl Difficulty {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ChordSetting {
+    LeftClick,
+    LeftAndRightClick,
+    Disabled,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Settings {
     pub difficulty: Difficulty,
     pub dimensions: Dimensions,
+    pub chord_setting: ChordSetting,
 }
 
 impl Settings {
-    pub fn new(difficulty: Difficulty) -> Self {
+    pub fn new(difficulty: Difficulty, chord_setting: ChordSetting) -> Self {
         let dimensions = difficulty.get_dimensions();
         Settings {
             difficulty,
             dimensions,
+            chord_setting,
         }
     }
 }
