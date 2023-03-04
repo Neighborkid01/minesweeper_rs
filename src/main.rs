@@ -27,18 +27,19 @@ enum Msg {
 }
 
 struct App {
-    active:                 bool,
-    face:                   Face,
-    cells:                  Vec<Cell>,
-    neighbors:              Vec<HashSet<usize>>,
-    mines:                  Vec<usize>,
-    shown_cells_count:      usize,
-    selected_cell_index:    Option<usize>,
-    seconds_played:         usize,
-    mouse_state:            MouseState,
-    first_click_is_zero:    bool,
-    settings:               Settings,
-    interval:               Option<Interval>,
+    active:                     bool,
+    face:                       Face,
+    cells:                      Vec<Cell>,
+    neighbors:                  Vec<HashSet<usize>>,
+    mines:                      Vec<usize>,
+    shown_cells_count:          usize,
+    selected_cell_index:        Option<usize>,
+    first_clicked_mine_index:   Option<usize>,
+    seconds_played:             usize,
+    mouse_state:                MouseState,
+    first_click_is_zero:        bool,
+    settings:                   Settings,
+    interval:                   Option<Interval>,
 }
 
 impl App {
@@ -55,6 +56,7 @@ impl App {
         self.seconds_played = 0;
         self.shown_cells_count = 0;
         self.clear_cells();
+        self.first_clicked_mine_index = None;
         self.active = true;
     }
 
@@ -160,13 +162,14 @@ impl App {
     }
 
     fn neighbors_selected_cell(&self, index: usize) -> bool {
-        if self.selected_cell_index.is_none() { return false; }
+        if let Some(selected_index) = self.selected_cell_index {
+            if index == selected_index { return true; }
 
-        let selected_index = self.selected_cell_index.unwrap();
-        if index == selected_index { return true; }
+            let neigbors = &self.neighbors[selected_index];
+            return neigbors.contains(&index)
+        }
 
-        let neigbors = &self.neighbors[selected_index];
-        neigbors.contains(&index)
+        false
     }
 
     fn click_neighboring_empty_cells(&mut self, index: usize) {
@@ -197,11 +200,12 @@ impl App {
         let cell_is_shown = cell.is_shown();
         let cell_at_selected_index_is_shown = self.selected_cell_index.is_some() && self.cells[self.selected_cell_index.unwrap()].is_shown();
         let cell_is_at_selected_index = self.selected_cell_index.is_some() && index == self.selected_cell_index.unwrap();
+        let cell_is_first_clicked_mine = self.first_clicked_mine_index.is_some() && index == self.first_clicked_mine_index.unwrap();
         let state_is_chording = self.mouse_state.is_chording(self.settings.chord_setting, cell_at_selected_index_is_shown) && self.neighbors_selected_cell(index);
 
         // This has to be a String instead of &str because the enum lifetime and cell's lifetime are different or something
         let color = { if cell_is_shown { cell.value.get_name_string() } else { String::from("") } };
-        let mine  = { if cell_is_shown && cell.is_mine() && cell_is_at_selected_index { "mine" } else { "" } };
+        let mine  = { if cell_is_shown && cell.is_mine() && (cell_is_at_selected_index || cell_is_first_clicked_mine) { "mine" } else { "" } };
         let shown = { if !cell.is_flagged() && (cell_is_shown || cell_is_at_selected_index || state_is_chording) { "clicked" } else { "" } };
 
         let onmousedown = link.callback(move |e: MouseEvent| Msg::MouseDown(index, e));
@@ -330,14 +334,20 @@ impl App {
         self.cells[index] = cell; // Need to reassign cell or its changes aren't saved
 
         if cell.is_mine() {
-            if self.selected_cell_index.is_none() || index != self.selected_cell_index.unwrap() {
-                return false;
-            } else {
-                self.click_all_mines(ctx);
+            if let Some(selected_index) = self.selected_cell_index {
+                if index == selected_index || self.neighbors[selected_index].contains(&index) {
+                    if self.first_clicked_mine_index.is_none() {
+                        self.first_clicked_mine_index = Some(index);
+                        self.click_all_mines(ctx);
+                        self.active = false;
+                        self.face = Face::Dead;
+                        self.interval = None;
+                    }
+                }
+                return true;
             }
-            self.active = false;
-            self.face = Face::Dead;
-            self.interval = None;
+
+            return false;
         } else {
             self.face = Face::Happy;
             self.shown_cells_count += 1;
@@ -425,6 +435,7 @@ impl Component for App {
             shown_cells_count,
             seconds_played,
             selected_cell_index: None,
+            first_clicked_mine_index: None,
             mouse_state: MouseState::Neither,
             first_click_is_zero: true,
             settings,
