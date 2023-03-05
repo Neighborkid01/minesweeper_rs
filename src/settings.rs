@@ -32,7 +32,7 @@ impl Difficulty {
             Difficulty::Beginner => { Dimensions::new(9, 9, 10) },
             Difficulty::Intermediate => { Dimensions::new(16, 16, 40) },
             Difficulty::Expert => { Dimensions::new(30, 16, 99) },
-            Difficulty::Custom(dimensions) => { dimensions.clone() },
+            Difficulty::Custom(dimensions) => { *dimensions },
         }
     }
 }
@@ -40,8 +40,8 @@ impl Difficulty {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ChordSetting {
     LeftClick,
-    LeftAndRightClick,
-    Disabled,
+    // LeftAndRightClick,
+    // Disabled,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

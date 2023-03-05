@@ -158,7 +158,7 @@ impl App {
         let row = index / self.settings.dimensions.width;
         let col = index % self.settings.dimensions.width;
 
-        (row as usize, col as usize)
+        (row, col)
     }
 
     fn neighbors_selected_cell(&self, index: usize) -> bool {
@@ -525,7 +525,7 @@ impl Component for App {
                 <div class="board-container">
                     <table id="board" class="board"
                         oncontextmenu={ ctx.link().callback(move |e: MouseEvent| { e.prevent_default(); Msg::Ignore }) }
-                        onmousemove={ ctx.link().callback(move |e: MouseEvent| Msg::MouseMove(e))}
+                        onmousemove={ ctx.link().callback(Msg::MouseMove)}
                     >
                         { for cell_rows }
                     </table>
