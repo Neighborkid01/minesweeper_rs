@@ -5,7 +5,7 @@ use settings::{Difficulty, Settings, Dimensions, ChordSetting};
 use wasm_bindgen::JsCast;
 use yew::{html, Component, Context, Html, classes};
 use web_sys::{Element, MouseEvent};
-use gloo_console as console;
+// use gloo_console as console;
 use gloo::timers::callback::Interval;
 use rand::Rng;
 use std::collections::HashSet;
@@ -50,7 +50,6 @@ impl App {
     }
 
     fn reset(&mut self) {
-        console::log!("Resetting...");
         self.interval = None;
         self.face = Face::Happy;
         self.seconds_played = 0;
@@ -383,7 +382,6 @@ impl App {
     }
 
     fn handle_win(&mut self) {
-        console::log!("you won!");
         self.active = false;
         self.face = Face::Cool;
         self.flag_all_mines();
@@ -405,7 +403,6 @@ impl Component for App {
     type Properties = ();
 
     fn create(_ctx: &Context<Self>) -> Self {
-        console::log!("Building app...");
         let difficulty = Difficulty::Beginner;
         let chord_setting = ChordSetting::LeftClick;
         let settings = Settings::new(difficulty, chord_setting);
@@ -416,7 +413,6 @@ impl Component for App {
         let neighbors = vec![HashSet::new(); settings.dimensions.width * settings.dimensions.height];
         let mines = vec![0; settings.dimensions.mines];
 
-        console::log!("Done");
         Self {
             active: true,
             face: Face::Happy,
