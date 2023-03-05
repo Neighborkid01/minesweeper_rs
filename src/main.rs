@@ -128,14 +128,14 @@ impl App {
         let r = row as isize;
         let c = col as isize;
 
-        if let Some(n) = self.get_index_from_row_col(r - 1, c - 1) { neighbors.insert(n); }
-        if let Some(n) = self.get_index_from_row_col(r - 1, c) { neighbors.insert(n); }
-        if let Some(n) = self.get_index_from_row_col(r - 1, c + 1) { neighbors.insert(n); }
-        if let Some(n) = self.get_index_from_row_col(r, c - 1) { neighbors.insert(n); }
-        if let Some(n) = self.get_index_from_row_col(r, c + 1) { neighbors.insert(n); }
-        if let Some(n) = self.get_index_from_row_col(r + 1, c - 1) { neighbors.insert(n); }
-        if let Some(n) = self.get_index_from_row_col(r + 1, c) { neighbors.insert(n); }
-        if let Some(n) = self.get_index_from_row_col(r + 1, c + 1) { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(r - 1, c - 1)  { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(r - 1, c)      { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(r - 1, c + 1)  { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(r, c - 1)      { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(r, c + 1)      { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(r + 1, c - 1)  { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(r + 1, c)      { neighbors.insert(n); }
+        if let Some(n) = self.get_index_from_row_col(r + 1, c + 1)  { neighbors.insert(n); }
 
         neighbors
     }
@@ -162,14 +162,11 @@ impl App {
     }
 
     fn neighbors_selected_cell(&self, index: usize) -> bool {
-        if let Some(selected_index) = self.selected_cell_index {
-            if index == selected_index { return true; }
+        let Some(selected_index) = self.selected_cell_index else { return false; };
+        if index == selected_index { return true; }
 
-            let neigbors = &self.neighbors[selected_index];
-            return neigbors.contains(&index)
-        }
-
-        false
+        let neigbors = &self.neighbors[selected_index];
+        neigbors.contains(&index)
     }
 
     fn click_neighboring_empty_cells(&mut self, index: usize) {
@@ -334,28 +331,22 @@ impl App {
         self.cells[index] = cell; // Need to reassign cell or its changes aren't saved
 
         if cell.is_mine() {
-            if let Some(selected_index) = self.selected_cell_index {
-                if index == selected_index || self.neighbors[selected_index].contains(&index) {
-                    if self.first_clicked_mine_index.is_none() {
-                        self.first_clicked_mine_index = Some(index);
-                        self.click_all_mines(ctx);
-                        self.active = false;
-                        self.face = Face::Dead;
-                        self.interval = None;
-                    }
-                }
-                return true;
+            let Some(selected_index) = self.selected_cell_index else { return false; };
+            if self.first_clicked_mine_index.is_none() && (index == selected_index || self.neighbors[selected_index].contains(&index)) {
+                self.first_clicked_mine_index = Some(index);
+                self.click_all_mines(ctx);
+                self.active = false;
+                self.face = Face::Dead;
+                self.interval = None;
             }
-
-            return false;
-        } else {
-            self.face = Face::Happy;
-            self.shown_cells_count += 1;
+            return true;
         }
+
+        self.face = Face::Happy;
+        self.shown_cells_count += 1;
 
         // Recursively click all neighboring cells if we clicked a 0
         if cell.is_zero() { self.click_neighboring_empty_cells(index); }
-
         self.check_for_win();
         true
     }
