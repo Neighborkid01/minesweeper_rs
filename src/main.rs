@@ -61,25 +61,18 @@ impl App {
 
     fn reassign_cells(&mut self, index: usize) {
         let (cells, neighbors, mines) = self.generate_cells(index);
-        for (index, cell) in cells.iter().enumerate() {
-            self.cells[index] = *cell;
-        }
-        for (index, neighbor) in neighbors.iter().enumerate() {
-            self.neighbors[index] = neighbor.clone();
-        }
-        for (index, mine) in mines.iter().enumerate() {
-            self.mines[index] = *mine;
-        }
+        self.cells = cells;
+        self.neighbors = neighbors;
+        self.mines = mines;
     }
 
     fn clear_cells(&mut self) {
-        for index in 0..self.cells.len() {
-            let mut cell = self.cells[index];
+        for cell in self.cells.iter_mut() {
             cell.reset();
-            self.cells[index] = cell;
         }
-        for index in 0..self.mines.len() {
-            self.mines[index] = 0;
+        for mine_index in self.mines.iter_mut() {
+            // Setting to 0 because it will be updated in reassign_cells
+            *mine_index = 0;
         }
     }
 
@@ -199,8 +192,6 @@ impl App {
         let cell_is_first_clicked_mine = self.first_clicked_mine_index.is_some() && index == self.first_clicked_mine_index.unwrap();
         let state_is_chording = self.mouse_state.is_chording(self.settings.chord_setting, cell_at_selected_index_is_shown) && self.neighbors_selected_cell(index);
 
-        // This has to be a String instead of &str because the enum lifetime and cell's lifetime are different or something
-        let color = { if cell_is_shown { cell.value.get_name_string() } else { String::from("") } };
         let mine  = { if cell_is_shown && cell.is_mine() && (cell_is_at_selected_index || cell_is_first_clicked_mine) { "mine" } else { "" } };
         let shown = { if !cell.is_flagged() && (cell_is_shown || cell_is_at_selected_index || state_is_chording) { "clicked" } else { "" } };
 
@@ -211,7 +202,7 @@ impl App {
             <td key={index}
                 class={classes!("cell-border")} {onmousedown} {onmouseup}
             >
-                <div class={classes!("cell", shown, mine, color)}>{value}</div>
+                <div class={classes!("cell", shown, mine, &cell.color)}>{value}</div>
             </td>
         }
     }
@@ -320,16 +311,14 @@ impl App {
             self.reset_interval(ctx.unwrap());
         }
 
-        let mut cell = self.cells[index];
-        if cell.is_shown() || cell.is_flagged() {
+        if self.cells[index].is_shown() || self.cells[index].is_flagged() {
             self.face = Face::Happy;
             return true;
         }
 
-        cell.handle_click();
-        self.cells[index] = cell; // Need to reassign cell or its changes aren't saved
+        self.cells[index].handle_click();
 
-        if cell.is_mine() {
+        if self.cells[index].is_mine() {
             let Some(selected_index) = self.selected_cell_index else { return false; };
             if self.first_clicked_mine_index.is_none() && (index == selected_index || self.neighbors[selected_index].contains(&index)) {
                 self.first_clicked_mine_index = Some(index);
@@ -345,7 +334,7 @@ impl App {
         self.shown_cells_count += 1;
 
         // Recursively click all neighboring cells if we clicked a 0
-        if cell.is_zero() { self.click_neighboring_empty_cells(index); }
+        if self.cells[index].is_zero() { self.click_neighboring_empty_cells(index); }
         self.check_for_win();
         true
     }
@@ -353,16 +342,13 @@ impl App {
     fn handle_right_click(&mut self, index: usize) -> bool {
         if !self.active { return false; }
 
-        let mut cell = self.cells[index];
-        cell.cycle_display();
-        self.cells[index] = cell;
+        self.cells[index].cycle_display();
         self.face = Face::Happy;
         true
     }
 
     fn handle_chord(&mut self, index: usize, ctx: Option<&Context<Self>>) -> bool {
-        let cell = self.cells[index];
-        if !cell.is_shown() { return false; }
+        if !self.cells[index].is_shown() { return false; }
 
         let neighbors = self.neighbors[index].clone();
         let neighboring_mines = neighbors.iter().filter(|index| self.cells[**index].is_mine()).count();
@@ -390,9 +376,7 @@ impl App {
 
     fn flag_all_mines(&mut self) {
         for index in &self.mines {
-            let mut mine = self.cells[*index];
-            mine.set_display_to_flagged();
-            self.cells[*index] = mine;
+            self.cells[*index].set_display_to_flagged();
         }
     }
 

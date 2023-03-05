@@ -63,10 +63,11 @@ impl DisplayState {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Cell {
     pub value: Value,
     pub display: DisplayState,
+    pub color: String,
 }
 
 impl Cell {
@@ -76,6 +77,7 @@ impl Cell {
         Self {
             value,
             display: DisplayState::Default,
+            color: "".to_string(),
         }
     }
 
@@ -134,6 +136,7 @@ impl Cell {
     // Private methods
     fn set_display(&mut self, display: DisplayState) {
         self.display = display;
+        self.color = if self.is_shown() { self.value.get_name_string() } else { "".to_string() };
     }
 
     fn set_value(&mut self, value: Value) {
