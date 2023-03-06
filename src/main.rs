@@ -1,7 +1,7 @@
 use cell::Cell;
 use face::Face;
 use mouse_state::MouseState;
-use settings::{Difficulty, Settings, Dimensions, ChordSetting};
+use settings::{Difficulty, Settings, Dimensions, FirstClickSetting};
 use wasm_bindgen::JsCast;
 use yew::{html, Component, Context, Html, classes};
 use web_sys::{Element, MouseEvent};
@@ -31,13 +31,12 @@ struct App {
     face:                       Face,
     cells:                      Vec<Cell>,
     neighbors:                  Vec<HashSet<usize>>,
-    mines:                      Vec<usize>,
+    mine_indices:               Vec<usize>,
     shown_cells_count:          usize,
     selected_cell_index:        Option<usize>,
     first_clicked_mine_index:   Option<usize>,
     seconds_played:             usize,
     mouse_state:                MouseState,
-    first_click_is_zero:        bool,
     settings:                   Settings,
     interval:                   Option<Interval>,
 }
@@ -49,68 +48,58 @@ impl App {
         self.interval = Some(interval);
     }
 
-    fn reset(&mut self) {
-        self.interval = None;
-        self.face = Face::Happy;
-        self.seconds_played = 0;
-        self.shown_cells_count = 0;
-        self.clear_cells();
-        self.first_clicked_mine_index = None;
-        self.active = true;
-    }
-
-    fn reassign_cells(&mut self, index: usize) {
-        let (cells, neighbors, mines) = self.generate_cells(index);
+    fn reassign_cells(&mut self, index_clicked: usize) {
+        let (cells, neighbors, mine_indices) = self.generate_cells(index_clicked);
         self.cells = cells;
         self.neighbors = neighbors;
-        self.mines = mines;
+        self.mine_indices = mine_indices;
     }
 
     fn clear_cells(&mut self) {
         for cell in self.cells.iter_mut() {
             cell.reset();
         }
-        for mine_index in self.mines.iter_mut() {
+        for mine_index in self.mine_indices.iter_mut() {
             // Setting to 0 because it will be updated in reassign_cells
             *mine_index = 0;
         }
     }
 
-    fn generate_cells(&self, index: usize) -> (Vec<Cell>, Vec<HashSet<usize>>, Vec<usize>) {
+    fn generate_cells(&self, index_clicked: usize) -> (Vec<Cell>, Vec<HashSet<usize>>, Vec<usize>) {
         let mut cells: Vec<Cell> = Vec::new();
         let mut neighbors: Vec<HashSet<usize>> = Vec::new();
-        let mut mines: Vec<usize> = Vec::new();
-        let mut mine_indicies: HashSet<usize> = HashSet::new();
-        let index_neighbors = self.calculate_neighbors(index);
-        for _ in 0..self.mines.len() {
+        let mut mine_indices: Vec<usize> = Vec::new();
+        let mut current_mine_indices: HashSet<usize> = HashSet::new();
+        let index_neighbors = self.calculate_neighbors(index_clicked);
+        for _ in 0..self.mine_indices.len() {
             let mut i = self.get_random_cell_index();
-            while self.index_check(index, i, &mine_indicies, &index_neighbors) {
+            while !self.index_can_be_mine(index_clicked, i, &current_mine_indices, &index_neighbors) {
                 i = self.get_random_cell_index();
             }
-            mine_indicies.insert(i);
+            current_mine_indices.insert(i);
         }
 
         for cell_index in 0..self.cells.len() {
             let neighboring_cells = self.calculate_neighbors(cell_index);
-            let neighboring_mines = if mine_indicies.contains(&cell_index) {
+            let neighboring_mines = if current_mine_indices.contains(&cell_index) {
                 None
             } else {
-                Some(neighboring_cells.intersection(&mine_indicies).count())
+                Some(neighboring_cells.intersection(&current_mine_indices).count())
             };
             let cell = Cell::new(neighboring_mines);
             cells.push(cell);
             neighbors.push(neighboring_cells);
-            if mine_indicies.contains(&cell_index) { mines.push(cell_index); }
+            if current_mine_indices.contains(&cell_index) { mine_indices.push(cell_index); }
         }
 
-        (cells, neighbors, mines)
+        (cells, neighbors, mine_indices)
     }
 
-    fn index_check(&self, index: usize, mine_index: usize, mine_indicies: &HashSet<usize>, neighbors: &HashSet<usize>) -> bool {
-        let index_check = index == mine_index || mine_indicies.contains(&mine_index);
-        if !self.first_click_is_zero { return index_check; }
-
-        index_check || neighbors.contains(&mine_index)
+    fn index_can_be_mine(&self, index_clicked: usize, mine_index: usize, current_mine_indices: &HashSet<usize>, neighbors: &HashSet<usize>) -> bool {
+        if current_mine_indices.contains(&mine_index) { return false; }
+        if index_clicked == mine_index { return self.settings.first_click_setting() == FirstClickSetting::Any; }
+        if neighbors.contains(&mine_index) && self.settings.first_click_setting() == FirstClickSetting::Zero { return false; }
+        true
     }
 
 
@@ -134,21 +123,21 @@ impl App {
 
     fn get_random_cell_index(&self) -> usize {
         let mut rng = rand::thread_rng();
-        rng.gen_range(0..(self.settings.dimensions.width * self.settings.dimensions.height))
+        rng.gen_range(0..(self.settings.dimensions().width() * self.settings.dimensions().height()))
     }
 
     fn get_index_from_row_col(&self, row: isize, col: isize) -> Option<usize> {
-        if row >= 0 && (row as usize) < self.settings.dimensions.height &&
-           col >= 0 && (col as usize) < self.settings.dimensions.width {
-            Some((row as usize * self.settings.dimensions.width) + col as usize)
+        if row >= 0 && (row as usize) < self.settings.dimensions().height() &&
+           col >= 0 && (col as usize) < self.settings.dimensions().width() {
+            Some((row as usize * self.settings.dimensions().width()) + col as usize)
         } else {
             None
         }
     }
 
     fn get_row_col_from_index(&self, index: usize) -> (usize, usize) {
-        let row = index / self.settings.dimensions.width;
-        let col = index % self.settings.dimensions.width;
+        let row = index / self.settings.dimensions().width();
+        let col = index % self.settings.dimensions().width();
 
         (row, col)
     }
@@ -169,8 +158,8 @@ impl App {
     }
 
     fn click_all_mines(&mut self, ctx: Option<&Context<Self>>) {
-        for i in 0..self.mines.len() {
-            let index = self.mines[i];
+        for i in 0..self.mine_indices.len() {
+            let index = self.mine_indices[i];
             self.handle_click(index, ctx);
         }
     }
@@ -190,7 +179,7 @@ impl App {
         let cell_at_selected_index_is_shown = self.selected_cell_index.is_some() && self.cells[self.selected_cell_index.unwrap()].is_shown();
         let cell_is_at_selected_index = self.selected_cell_index.is_some() && index == self.selected_cell_index.unwrap();
         let cell_is_first_clicked_mine = self.first_clicked_mine_index.is_some() && index == self.first_clicked_mine_index.unwrap();
-        let state_is_chording = self.mouse_state.is_chording(self.settings.chord_setting, cell_at_selected_index_is_shown) && self.neighbors_selected_cell(index);
+        let state_is_chording = self.mouse_state.is_chording(self.settings.chord_setting(), cell_at_selected_index_is_shown) && self.neighbors_selected_cell(index);
 
         let mine  = { if cell_is_shown && cell.is_mine() && (cell_is_at_selected_index || cell_is_first_clicked_mine) { "mine" } else { "" } };
         let shown = { if !cell.is_flagged() && (cell_is_shown || cell_is_at_selected_index || state_is_chording) { "clicked" } else { "" } };
@@ -209,15 +198,15 @@ impl App {
 
     fn check_difficulty_is_eq(&self, difficulty: Difficulty) -> bool {
         // https://stackoverflow.com/questions/32554285/compare-enums-only-by-variant-not-value
-        std::mem::discriminant(&self.settings.difficulty) == std::mem::discriminant(&difficulty)
+        std::mem::discriminant(&self.settings.difficulty()) == std::mem::discriminant(&difficulty)
     }
 
-    fn handle_change_size(&mut self, difficulty: Difficulty, chord_setting: ChordSetting) -> bool {
-        self.settings = Settings::new(difficulty, chord_setting);
-        self.cells = vec![Cell::new_empty(); self.settings.dimensions.width * self.settings.dimensions.height];
-        self.neighbors = vec![HashSet::new(); self.settings.dimensions.width * self.settings.dimensions.height];
-        self.mines = vec![0; self.settings.dimensions.mines];
-        self.reset();
+    fn handle_change_size(&mut self, difficulty: Difficulty) -> bool {
+        self.settings.set_difficulty(difficulty);
+        self.cells = vec![Cell::new_empty(); self.settings.dimensions().width() * self.settings.dimensions().height()];
+        self.neighbors = vec![HashSet::new(); self.settings.dimensions().width() * self.settings.dimensions().height()];
+        self.mine_indices = vec![0; self.settings.dimensions().mines()];
+        self.handle_reset();
         true
     }
 
@@ -249,7 +238,7 @@ impl App {
                 if self.selected_cell_index.is_none() { return false; }
                 if self.selected_cell_index.unwrap() != index { return true; }
 
-                let chord_setting = self.settings.chord_setting;
+                let chord_setting = self.settings.chord_setting();
                 let cell_is_shown = self.cells[index].is_shown();
                 let is_chording = self.mouse_state.is_chording(chord_setting, cell_is_shown);
 
@@ -299,7 +288,13 @@ impl App {
     }
 
     fn handle_reset(&mut self) -> bool {
-        self.reset();
+        self.interval = None;
+        self.face = Face::Happy;
+        self.seconds_played = 0;
+        self.shown_cells_count = 0;
+        self.clear_cells();
+        self.first_clicked_mine_index = None;
+        self.active = true;
         true
     }
 
@@ -362,7 +357,7 @@ impl App {
     }
 
     fn check_for_win(&mut self) {
-        if self.shown_cells_count + self.mines.len() == self.cells.len() {
+        if self.shown_cells_count + self.mine_indices.len() == self.cells.len() {
             self.handle_win();
         }
     }
@@ -375,7 +370,7 @@ impl App {
     }
 
     fn flag_all_mines(&mut self) {
-        for index in &self.mines {
+        for index in &self.mine_indices {
             self.cells[*index].set_display_to_flagged();
         }
     }
@@ -387,28 +382,25 @@ impl Component for App {
     type Properties = ();
 
     fn create(_ctx: &Context<Self>) -> Self {
-        let difficulty = Difficulty::Beginner;
-        let chord_setting = ChordSetting::LeftClick;
-        let settings = Settings::new(difficulty, chord_setting);
+        let settings = Settings::default();
         let shown_cells_count   = 0;
         let seconds_played      = 0;
 
-        let cells = vec![Cell::new_empty(); settings.dimensions.width * settings.dimensions.height];
-        let neighbors = vec![HashSet::new(); settings.dimensions.width * settings.dimensions.height];
-        let mines = vec![0; settings.dimensions.mines];
+        let cells = vec![Cell::new_empty(); settings.dimensions().width() * settings.dimensions().height()];
+        let neighbors = vec![HashSet::new(); settings.dimensions().width() * settings.dimensions().height()];
+        let mines = vec![0; settings.dimensions().mines()];
 
         Self {
             active: true,
             face: Face::Happy,
             cells,
             neighbors,
-            mines,
+            mine_indices: mines,
             shown_cells_count,
             seconds_played,
             selected_cell_index: None,
             first_clicked_mine_index: None,
             mouse_state: MouseState::Neither,
-            first_click_is_zero: true,
             settings,
             interval: None,
         }
@@ -417,7 +409,7 @@ impl Component for App {
     fn update(&mut self, ctx: &Context<Self>, msg: Msg) -> bool {
         match msg {
             Msg::ChangeSize(difficulty) => {
-                self.handle_change_size(difficulty, self.settings.chord_setting)
+                self.handle_change_size(difficulty)
             },
             Msg::MouseDown(index, event) => {
                 self.handle_mouse_down(index, event)
@@ -441,18 +433,18 @@ impl Component for App {
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         let flagged_mines_count = self.count_flagged_mines() as isize;
-        let mines_remaining = self.mines.len() as isize - flagged_mines_count;
+        let mines_remaining = self.mine_indices.len() as isize - flagged_mines_count;
 
         let highlight_beginner = if self.check_difficulty_is_eq(Difficulty::Beginner) { "highlight" } else { "" };
         let highlight_intermediate = if self.check_difficulty_is_eq(Difficulty::Intermediate) { "highlight" } else { "" };
         let highlight_expert = if self.check_difficulty_is_eq(Difficulty::Expert) { "highlight" } else { "" };
-        let highlight_custom = if self.check_difficulty_is_eq(Difficulty::Custom(Dimensions { width: 0, height: 0, mines: 0 })) { "highlight" } else { "" }; // The specific dimensions don't matter here
+        let highlight_custom = if self.check_difficulty_is_eq(Difficulty::Custom(Dimensions::new(0, 0, 0))) { "highlight" } else { "" }; // The specific dimensions don't matter here
 
         let cell_rows = self.cells
-            .chunks(self.settings.dimensions.width)
+            .chunks(self.settings.dimensions().width())
             .enumerate()
             .map(|(y, cells)| {
-                let index_offset = y * self.settings.dimensions.width;
+                let index_offset = y * self.settings.dimensions().width();
 
                 let row_cells = cells
                     .iter()

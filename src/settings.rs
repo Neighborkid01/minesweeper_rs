@@ -4,9 +4,9 @@ const MAX_MINES: usize = 512;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Dimensions {
-    pub width: usize,
-    pub height: usize,
-    pub mines: usize,
+    width: usize,
+    height: usize,
+    mines: usize,
 }
 
 impl Dimensions {
@@ -15,6 +15,18 @@ impl Dimensions {
         let h = if height > MAX_HEIGHT { MAX_HEIGHT } else { height };
         let m = if mines  > MAX_MINES  { MAX_MINES }  else { mines };
         Dimensions { width: w, height: h, mines: m }
+    }
+
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
+    }
+
+    pub fn mines(&self) -> usize {
+        self.mines
     }
 }
 
@@ -40,24 +52,60 @@ impl Difficulty {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ChordSetting {
     LeftClick,
-    // LeftAndRightClick,
-    // Disabled,
+    LeftAndRightClick,
+    Disabled,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum FirstClickSetting {
+    Any,
+    Safe,
+    Zero,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Settings {
-    pub difficulty: Difficulty,
-    pub dimensions: Dimensions,
-    pub chord_setting: ChordSetting,
+    difficulty: Difficulty,
+    dimensions: Dimensions,
+    chord_setting: ChordSetting,
+    first_click_setting: FirstClickSetting,
 }
 
 impl Settings {
-    pub fn new(difficulty: Difficulty, chord_setting: ChordSetting) -> Self {
+    pub fn new(difficulty: Difficulty, chord_setting: ChordSetting, first_click_setting: FirstClickSetting) -> Self {
         let dimensions = difficulty.get_dimensions();
         Settings {
             difficulty,
             dimensions,
             chord_setting,
+            first_click_setting,
         }
+    }
+
+    pub fn difficulty(&self) -> Difficulty {
+        self.difficulty
+    }
+
+    pub fn dimensions(&self) -> Dimensions {
+        self.dimensions
+    }
+
+    pub fn chord_setting(&self) -> ChordSetting {
+        self.chord_setting
+    }
+
+    pub fn first_click_setting(&self) -> FirstClickSetting {
+        self.first_click_setting
+    }
+
+    pub fn set_difficulty(&mut self, difficulty: Difficulty) {
+        self.difficulty = difficulty;
+        self.dimensions = difficulty.get_dimensions();
+    }
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings::new(Difficulty::Beginner, ChordSetting::LeftClick, FirstClickSetting::Zero)
     }
 }
