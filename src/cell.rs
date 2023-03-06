@@ -144,8 +144,8 @@ impl Cell {
     }
 
     fn calculate_value(neighboring_mines: Option<usize>) -> Value {
-        if neighboring_mines.is_none() { return Value::Mine; }
-        match neighboring_mines.unwrap() {
+        let Some(neighboring_mines) = neighboring_mines else { return Value::Mine; };
+        match neighboring_mines {
             0 => { Value::Zero },
             1 => { Value::One },
             2 => { Value::Two },
@@ -155,7 +155,7 @@ impl Cell {
             6 => { Value::Six },
             7 => { Value::Seven },
             8 => { Value::Eight },
-            _ => panic!("Unexpected number of neighbors: {}", neighboring_mines.unwrap()),
+            _ => panic!("Unexpected number of neighbors: {}", neighboring_mines),
         }
     }
 }

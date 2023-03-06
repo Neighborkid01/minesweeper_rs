@@ -235,8 +235,8 @@ impl App {
             },
             MouseState::Left => {
                 if !new_mouse_state.is_neither() { return true; }
-                if self.selected_cell_index.is_none() { return false; }
-                if self.selected_cell_index.unwrap() != index { return true; }
+                let Some(selected_cell_index) = self.selected_cell_index else { return false; };
+                if selected_cell_index != index { return true; }
 
                 let chord_setting = self.settings.chord_setting();
                 let cell_is_shown = self.cells[index].is_shown();
