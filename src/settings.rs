@@ -69,16 +69,23 @@ pub struct Settings {
     dimensions: Dimensions,
     chord_setting: ChordSetting,
     first_click_setting: FirstClickSetting,
+    allow_mark_cell_as_unknown: bool,
 }
 
 impl Settings {
-    pub fn new(difficulty: Difficulty, chord_setting: ChordSetting, first_click_setting: FirstClickSetting) -> Self {
+    pub fn new(
+        difficulty: Difficulty,
+        chord_setting: ChordSetting,
+        first_click_setting: FirstClickSetting,
+        allow_mark_cell_as_unknown: bool,
+    ) -> Self {
         let dimensions = difficulty.get_dimensions();
         Settings {
             difficulty,
             dimensions,
             chord_setting,
             first_click_setting,
+            allow_mark_cell_as_unknown,
         }
     }
 
@@ -98,6 +105,10 @@ impl Settings {
         self.first_click_setting
     }
 
+    pub fn allow_mark_cell_as_unknown(&self) -> bool {
+        self.allow_mark_cell_as_unknown
+    }
+
     pub fn set_difficulty(&mut self, difficulty: Difficulty) {
         self.difficulty = difficulty;
         self.dimensions = difficulty.get_dimensions();
@@ -106,6 +117,6 @@ impl Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings::new(Difficulty::Beginner, ChordSetting::LeftClick, FirstClickSetting::Zero)
+        Settings::new(Difficulty::Beginner, ChordSetting::LeftClick, FirstClickSetting::Zero, false)
     }
 }

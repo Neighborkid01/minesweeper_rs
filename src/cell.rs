@@ -65,9 +65,9 @@ impl DisplayState {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Cell {
-    pub value: Value,
-    pub display: DisplayState,
-    pub color: String,
+    value: Value,
+    display: DisplayState,
+    color: String,
 }
 
 impl Cell {
@@ -85,6 +85,10 @@ impl Cell {
         Cell::new(Some(0))
     }
 
+    pub fn color(&self) -> &str {
+        &self.color
+    }
+
     pub fn reset(&mut self) {
         self.set_value(Value::Zero);
         self.set_display(DisplayState::Default);
@@ -99,12 +103,18 @@ impl Cell {
         }
     }
 
-    pub fn cycle_display(&mut self) {
+    pub fn cycle_display(&mut self, allow_unknown: bool) {
         match self.display {
             DisplayState::Default => { self.set_display(DisplayState::Flagged) }
-            DisplayState::Flagged => { self.set_display(DisplayState::Unknown) }
+            DisplayState::Flagged => {
+                if allow_unknown {
+                    self.set_display(DisplayState::Unknown)
+                } else {
+                    self.set_display(DisplayState::Default)
+                }
+            }
             DisplayState::Unknown => { self.set_display(DisplayState::Default) }
-            DisplayState::Shown(value) => { self.set_display(DisplayState::Shown(value)) }
+            DisplayState::Shown(_) => ()
         }
     }
 

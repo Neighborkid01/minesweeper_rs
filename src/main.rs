@@ -191,7 +191,7 @@ impl App {
             <td key={index}
                 class={classes!("cell-border")} {onmousedown} {onmouseup}
             >
-                <div class={classes!("cell", shown, mine, &cell.color)}>{value}</div>
+                <div class={classes!("cell", shown, mine, cell.color().to_string())}>{value}</div>
             </td>
         }
     }
@@ -337,7 +337,7 @@ impl App {
     fn handle_right_click(&mut self, index: usize) -> bool {
         if !self.active { return false; }
 
-        self.cells[index].cycle_display();
+        self.cells[index].cycle_display(self.settings.allow_mark_cell_as_unknown());
         self.face = Face::Happy;
         true
     }
