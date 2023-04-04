@@ -275,6 +275,8 @@ impl App {
 
         if x <= 0.0 || y <= 0.0 {
             self.selected_cell_index = None;
+            self.mouse_state = MouseState::Neither;
+            self.face = Face::Happy;
             return true;
         }
 
