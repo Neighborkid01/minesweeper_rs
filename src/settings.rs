@@ -51,6 +51,33 @@ impl Difficulty {
 
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DifficultySetting {
+    difficulty: Difficulty,
+    dimensions: Dimensions,
+}
+
+impl DifficultySetting {
+    pub fn new(difficulty: Difficulty) -> Self {
+        let dimensions = difficulty.get_dimensions();
+        DifficultySetting { difficulty, dimensions }
+    }
+
+    pub fn difficulty(&self) -> Difficulty {
+        self.difficulty
+    }
+
+    pub fn dimensions(&self) -> Dimensions {
+        self.dimensions
+    }
+
+    pub fn set_difficulty(&mut self, difficulty: Difficulty) {
+        self.difficulty = difficulty;
+        self.dimensions = difficulty.get_dimensions();
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ChordSetting {
     LeftClick,
     LeftAndRightClick,
@@ -67,8 +94,7 @@ pub enum FirstClickSetting {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Settings {
-    difficulty: Difficulty,
-    dimensions: Dimensions,
+    difficulty_setting: DifficultySetting,
     chord_setting: ChordSetting,
     first_click_setting: FirstClickSetting,
     allow_mark_cell_as_unknown: bool,
@@ -76,15 +102,13 @@ pub struct Settings {
 
 impl Settings {
     pub fn new(
-        difficulty: Difficulty,
+        difficulty_setting: DifficultySetting,
         chord_setting: ChordSetting,
         first_click_setting: FirstClickSetting,
         allow_mark_cell_as_unknown: bool,
     ) -> Self {
-        let dimensions = difficulty.get_dimensions();
         Settings {
-            difficulty,
-            dimensions,
+            difficulty_setting,
             chord_setting,
             first_click_setting,
             allow_mark_cell_as_unknown,
@@ -92,11 +116,11 @@ impl Settings {
     }
 
     pub fn difficulty(&self) -> Difficulty {
-        self.difficulty
+        self.difficulty_setting.difficulty()
     }
 
     pub fn dimensions(&self) -> Dimensions {
-        self.dimensions
+        self.difficulty_setting.dimensions()
     }
 
     pub fn chord_setting(&self) -> ChordSetting {
@@ -112,13 +136,12 @@ impl Settings {
     }
 
     pub fn set_difficulty(&mut self, difficulty: Difficulty) {
-        self.difficulty = difficulty;
-        self.dimensions = difficulty.get_dimensions();
+        self.difficulty_setting.set_difficulty(difficulty);
     }
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings::new(Difficulty::Beginner, ChordSetting::LeftClick, FirstClickSetting::Zero, false)
+        Settings::new(DifficultySetting::new(Difficulty::Beginner), ChordSetting::LeftClick, FirstClickSetting::Zero, false)
     }
 }
