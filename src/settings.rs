@@ -49,6 +49,7 @@ impl Difficulty {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ChordSetting {
     LeftClick,
@@ -56,6 +57,7 @@ pub enum ChordSetting {
     Disabled,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FirstClickSetting {
     Any,

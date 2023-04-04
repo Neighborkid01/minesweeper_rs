@@ -21,6 +21,7 @@ body {
 
 .difficulty {
   display: flex;
+  cursor: pointer;
   flex-direction: row;
   justify-content: space-between;
   background-color: lightgrey;
