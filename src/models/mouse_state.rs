@@ -1,5 +1,5 @@
 use web_sys::MouseEvent;
-use crate::settings::ChordSetting;
+use crate::models::settings::ChordSetting;
 // use gloo_console as console;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

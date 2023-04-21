@@ -1,14 +1,11 @@
 mod components;
-mod cell;
-mod face;
-mod mouse_state;
-mod settings;
+mod models;
 
 use components::counter::Counter;
-use cell::Cell;
-use face::Face;
-use mouse_state::MouseState;
-use settings::{Difficulty, Settings, Dimensions, FirstClickSetting};
+use models::face::Face;
+use models::cell::Cell as Cell;
+use models::mouse_state::MouseState;
+use models::settings::{Difficulty, Settings, Dimensions, FirstClickSetting};
 use wasm_bindgen::JsCast;
 use yew::{html, Component, Context, Html, classes};
 use web_sys::{Element, MouseEvent};
