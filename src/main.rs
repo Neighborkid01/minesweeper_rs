@@ -1,3 +1,10 @@
+mod components;
+mod cell;
+mod face;
+mod mouse_state;
+mod settings;
+
+use components::counter::Counter;
 use cell::Cell;
 use face::Face;
 use mouse_state::MouseState;
@@ -8,12 +15,7 @@ use web_sys::{Element, MouseEvent};
 // use gloo_console as console;
 use gloo::timers::callback::Interval;
 use rand::Rng;
-use std::collections::HashSet;
-
-mod cell;
-mod face;
-mod mouse_state;
-mod settings;
+use std::{collections::HashSet, cmp};
 
 enum Msg {
     Tick,
@@ -285,7 +287,7 @@ impl App {
 
     fn handle_tick(&mut self) -> bool {
         self.seconds_played += 1;
-        if self.seconds_played >= 999 { self.interval = None; }
+        if self.seconds_played > 999 { self.seconds_played = 999; }
         true
     }
 
@@ -435,7 +437,7 @@ impl Component for App {
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         let flagged_mines_count = self.count_flagged_mines() as isize;
-        let mines_remaining = self.mine_indices.len() as isize - flagged_mines_count;
+        let mines_remaining = cmp::max(self.mine_indices.len() as isize - flagged_mines_count, -99);
 
         let highlight_beginner = if self.check_difficulty_is_eq(Difficulty::Beginner) { "highlight" } else { "" };
         let highlight_intermediate = if self.check_difficulty_is_eq(Difficulty::Intermediate) { "highlight" } else { "" };
@@ -485,15 +487,11 @@ impl Component for App {
                 </div>
 
                 <div class="header">
-                    <div id="minesRemainingContainer" class="counter left">
-                        <span id="minesRemaining">{ format!("{:0>3}", mines_remaining)  }</span>
-                    </div>
+                    <Counter value={mines_remaining} classes="left" />
                     <div id="resetButtonContainer" class="center">
                         <span id="resetButton" onclick={ctx.link().callback(move |_| Msg::Reset)}>{ self.face.as_str() }</span>
                     </div>
-                    <div id="timerContainer" class="counter right">
-                        <span id="timer">{ format!("{:0>3}", self.seconds_played) }</span>
-                    </div>
+                    <Counter value={self.seconds_played as isize} classes="right" />
                 </div>
 
                 <div class="board-container">
