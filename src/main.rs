@@ -5,7 +5,7 @@ use components::counter::Counter;
 use models::face::Face;
 use models::cell::Cell as Cell;
 use models::mouse_state::MouseState;
-use models::settings::{Difficulty, Settings, Dimensions, FirstClickSetting};
+use models::settings::{Difficulty, Settings, Dimensions};
 use wasm_bindgen::JsCast;
 use yew::{html, Component, Context, Html, classes};
 use web_sys::{Element, MouseEvent};
@@ -96,8 +96,8 @@ impl App {
 
     fn index_can_be_mine(&self, index_clicked: usize, mine_index: usize, current_mine_indices: &HashSet<usize>, neighbors: &HashSet<usize>) -> bool {
         if current_mine_indices.contains(&mine_index) { return false; }
-        if index_clicked == mine_index { return self.settings.first_click_setting() == FirstClickSetting::Any; }
-        if neighbors.contains(&mine_index) && self.settings.first_click_setting() == FirstClickSetting::Zero { return false; }
+        if index_clicked == mine_index { return self.settings.first_click_setting_is_any(); }
+        if neighbors.contains(&mine_index) && self.settings.first_click_setting_is_zero() { return false; }
         true
     }
 

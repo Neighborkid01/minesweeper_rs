@@ -127,8 +127,12 @@ impl Settings {
         self.chord_setting
     }
 
-    pub fn first_click_setting(&self) -> FirstClickSetting {
-        self.first_click_setting
+    pub fn first_click_setting_is_any(&self) -> bool {
+        self.first_click_setting == FirstClickSetting::Any
+    }
+
+    pub fn first_click_setting_is_zero(&self) -> bool {
+        self.first_click_setting == FirstClickSetting::Zero
     }
 
     pub fn allow_mark_cell_as_unknown(&self) -> bool {
