@@ -2,6 +2,7 @@ mod components;
 mod models;
 
 use components::counter::Counter;
+use components::difficulty_option::DifficultyOption;
 use models::face::Face;
 use models::cell::Cell as Cell;
 use models::mouse_state::MouseState;
@@ -440,6 +441,7 @@ impl Component for App {
         let highlight_intermediate = if self.check_difficulty_is_eq(Difficulty::Intermediate) { "highlight" } else { "" };
         let highlight_expert = if self.check_difficulty_is_eq(Difficulty::Expert) { "highlight" } else { "" };
         let highlight_custom = if self.check_difficulty_is_eq(Difficulty::Custom(Dimensions::new(0, 0, 0))) { "highlight" } else { "" }; // The specific dimensions don't matter here
+        let on_difficulty_selected = ctx.link().callback(|difficulty| Msg::ChangeSize(difficulty));
 
         let cell_rows = self.cells
             .chunks(self.settings.dimensions().width())
@@ -461,32 +463,16 @@ impl Component for App {
         html! {
             <div class="container no-select">
                 <div class="settings">
-                    <a class={classes!("difficulty", highlight_beginner)}
-                       onclick={ctx.link().callback(move |_| Msg::ChangeSize(Difficulty::Beginner))}
-                    >
-                        { "Beginner" }
-                    </a>
-                    <a class={classes!("difficulty", highlight_intermediate)}
-                       onclick={ctx.link().callback(move |_| Msg::ChangeSize(Difficulty::Intermediate))}
-                    >
-                        { "Intermediate" }
-                    </a>
-                    <a class={classes!("difficulty", highlight_expert)}
-                       onclick={ctx.link().callback(move |_| Msg::ChangeSize(Difficulty::Expert))}
-                    >
-                        { "Expert" }
-                    </a>
-                    <a class={classes!("difficulty", highlight_custom)}
-                       onclick={ctx.link().callback(move |_| Msg::ChangeSize(Difficulty::Custom(Dimensions::new(32, 32, 250))))}
-                    >
-                        { "Custom" }
-                    </a>
+                    <DifficultyOption classes={highlight_beginner} difficulty={Difficulty::Beginner} on_difficulty_selected={&on_difficulty_selected} />
+                    <DifficultyOption classes={highlight_intermediate} difficulty={Difficulty::Intermediate} on_difficulty_selected={&on_difficulty_selected} />
+                    <DifficultyOption classes={highlight_expert} difficulty={Difficulty::Expert} on_difficulty_selected={&on_difficulty_selected} />
+                    <DifficultyOption classes={highlight_custom} difficulty={Difficulty::Custom(Dimensions::default())} on_difficulty_selected={&on_difficulty_selected} />
                 </div>
 
                 <div class="header">
                     <Counter value={mines_remaining} classes="left" />
                     <div id="resetButtonContainer" class="center">
-                        <span id="resetButton" onclick={ctx.link().callback(move |_| Msg::Reset)}>{ self.face.as_str() }</span>
+                        <span id="resetButton" onclick={ctx.link().callback(move |_| Msg::Reset)}>{ self.face.to_str() }</span>
                     </div>
                     <Counter value={self.seconds_played as isize} classes="right" />
                 </div>
