@@ -9,6 +9,10 @@ pub struct Dimensions {
     mines: usize,
 }
 
+impl Default for Dimensions {
+    fn default() -> Self { Dimensions::new(16, 16, 10) }
+}
+
 impl Dimensions {
     pub fn new(width: usize, height: usize, mines: usize) -> Self { // This should not stay public
         let w = if width  > MAX_WIDTH  { MAX_WIDTH }  else { width };
@@ -38,13 +42,26 @@ pub enum Difficulty {
     Custom(Dimensions),
 }
 
+impl Default for Difficulty {
+    fn default() -> Self { Difficulty::Beginner }
+}
+
 impl Difficulty {
-    fn get_dimensions(&self) -> Dimensions {
+    fn dimensions(&self) -> Dimensions {
         match self {
             Difficulty::Beginner => { Dimensions::new(9, 9, 10) },
             Difficulty::Intermediate => { Dimensions::new(16, 16, 40) },
             Difficulty::Expert => { Dimensions::new(30, 16, 99) },
             Difficulty::Custom(dimensions) => { *dimensions },
+        }
+    }
+
+    pub fn title(&self) -> String {
+        match self {
+            Difficulty::Beginner => { "Beginner".into() },
+            Difficulty::Intermediate => { "Intermediate".into() },
+            Difficulty::Expert => { "Expert".into() },
+            Difficulty::Custom(_) => { "Custom".into() },
         }
     }
 }
@@ -56,9 +73,13 @@ pub struct DifficultySetting {
     dimensions: Dimensions,
 }
 
+impl Default for DifficultySetting {
+    fn default() -> Self { DifficultySetting::new(Difficulty::default()) }
+}
+
 impl DifficultySetting {
     pub fn new(difficulty: Difficulty) -> Self {
-        let dimensions = difficulty.get_dimensions();
+        let dimensions = difficulty.dimensions();
         DifficultySetting { difficulty, dimensions }
     }
 
@@ -72,7 +93,7 @@ impl DifficultySetting {
 
     pub fn set_difficulty(&mut self, difficulty: Difficulty) {
         self.difficulty = difficulty;
-        self.dimensions = difficulty.get_dimensions();
+        self.dimensions = difficulty.dimensions();
     }
 }
 
@@ -84,12 +105,20 @@ pub enum ChordSetting {
     Disabled,
 }
 
+impl Default for ChordSetting {
+    fn default() -> Self { ChordSetting::LeftClick }
+}
+
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FirstClickSetting {
     Any,
     Safe,
     Zero,
+}
+
+impl Default for FirstClickSetting {
+    fn default() -> Self { FirstClickSetting::Zero }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -146,6 +175,11 @@ impl Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings::new(DifficultySetting::new(Difficulty::Beginner), ChordSetting::LeftClick, FirstClickSetting::Zero, false)
+        Settings::new(
+            DifficultySetting::default(),
+            ChordSetting::default(),
+            FirstClickSetting::Zero,
+            false
+        )
     }
 }
