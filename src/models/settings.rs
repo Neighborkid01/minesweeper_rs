@@ -10,7 +10,7 @@ pub struct Dimensions {
 }
 
 impl Default for Dimensions {
-    fn default() -> Self { Dimensions::new(16, 16, 10) }
+    fn default() -> Self { Dimensions::new(32, 32, 250) }
 }
 
 impl Dimensions {
