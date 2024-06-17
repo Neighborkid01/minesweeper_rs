@@ -1,30 +1,18 @@
-use yew::prelude::*;
-use crate::models::settings::{Difficulty, Dimensions};
+use leptos::*;
+use crate::models::settings::{Difficulty, Settings};
 
-#[derive(Properties, PartialEq)]
-pub struct DifficultyOptionProps {
-    pub on_difficulty_selected: Callback<Difficulty>,
-    pub classes: String,
-    pub difficulty: Difficulty
-}
-
-#[function_component(DifficultyOption)]
-pub fn difficulty_option(
-    DifficultyOptionProps {classes, difficulty, on_difficulty_selected}: &DifficultyOptionProps
-) -> Html {
-    html! {
-        <a class={classes!("difficulty", classes)}
-            onclick={
-                // todo!("This only works because custom is hard-coded to have the default dimensions.")
-                match difficulty {
-                    Difficulty::Beginner => { on_difficulty_selected.reform(|_| Difficulty::Beginner) },
-                    Difficulty::Intermediate => { on_difficulty_selected.reform(|_| Difficulty::Intermediate) },
-                    Difficulty::Expert => { on_difficulty_selected.reform(|_| Difficulty::Expert) },
-                    Difficulty::Custom(_) => { on_difficulty_selected.reform(|_| Difficulty::Custom(Dimensions::default())) },
-                }
-            }
+#[component]
+pub fn DifficultyOption(
+    on_difficulty_selected: impl Fn(Difficulty) + 'static,
+    settings: ReadSignal<Settings>,
+    difficulty_to_display: Difficulty,
+) -> impl IntoView {
+    view! {
+        <a class="difficulty"
+            class:highlight=move || with!(|settings| settings.difficulty_matches(&difficulty_to_display))
+            on:click=move |_| on_difficulty_selected(difficulty_to_display)
         >
-            {difficulty.title()}
+            {difficulty_to_display.title()}
         </a>
     }
 }

@@ -47,7 +47,7 @@ impl Default for Difficulty {
 }
 
 impl Difficulty {
-    fn dimensions(&self) -> Dimensions {
+    pub fn dimensions(&self) -> Dimensions {
         match self {
             Difficulty::Beginner => { Dimensions::new(9, 9, 10) },
             Difficulty::Intermediate => { Dimensions::new(16, 16, 40) },
@@ -63,6 +63,10 @@ impl Difficulty {
             Difficulty::Expert => { "Expert".into() },
             Difficulty::Custom(_) => { "Custom".into() },
         }
+    }
+
+    fn matches(&self, difficulty: &Difficulty) -> bool {
+        std::mem::discriminant(self) == std::mem::discriminant(difficulty)
     }
 }
 
@@ -170,6 +174,10 @@ impl Settings {
 
     pub fn set_difficulty(&mut self, difficulty: Difficulty) {
         self.difficulty_setting.set_difficulty(difficulty);
+    }
+
+    pub fn difficulty_matches(&self, difficulty: &Difficulty) -> bool {
+        self.difficulty_setting.difficulty().matches(difficulty)
     }
 }
 
