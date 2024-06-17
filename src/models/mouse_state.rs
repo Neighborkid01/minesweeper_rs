@@ -34,6 +34,12 @@ pub enum MouseState {
     AfterBoth,
 }
 
+impl Default for MouseState {
+    fn default() -> Self {
+        Self::Neither
+    }
+}
+
 impl MouseState {
     pub fn is_neither(self) -> bool {
         self == Self::Neither

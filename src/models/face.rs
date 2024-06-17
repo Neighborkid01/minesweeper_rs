@@ -6,6 +6,12 @@ pub enum Face {
     Cool,
 }
 
+impl Default for Face {
+    fn default() -> Self {
+        Face::Happy
+    }
+}
+
 impl Face {
     pub fn to_str(&self) -> &'static str {
         match self {
