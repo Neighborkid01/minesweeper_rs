@@ -40,7 +40,7 @@ pub enum DisplayState {
 }
 
 impl DisplayState {
-    pub fn get_display_string(&self) -> &str {
+    pub fn get_display_string(&self) -> String {
         match self {
             DisplayState::Default => " ",
             DisplayState::Flagged => "🚩",
@@ -59,7 +59,7 @@ impl DisplayState {
                     Value::Eight    => "8",
                 }
             }
-        }
+        }.into()
     }
 }
 
@@ -139,8 +139,8 @@ impl Cell {
         self.set_display(DisplayState::Flagged);
     }
 
-    pub fn get_value_display_string(&self) -> &str {
-        self.display.get_display_string()
+    pub fn get_value_display_string(&self) -> String {
+        self.display.get_display_string().into()
     }
 
     // Private methods

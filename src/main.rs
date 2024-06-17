@@ -3,12 +3,17 @@ mod models;
 
 use leptos::*;
 use leptos::logging::*;
-use components::counter::Counter;
-use components::difficulty_option::DifficultyOption;
-use models::face::Face;
-use models::cell::Cell as Cell;
-use models::mouse_state::MouseState;
-use models::settings::{Difficulty, Settings, Dimensions};
+use components::{
+    cell_grid::CellGrid,
+    counter::Counter,
+    difficulty_option::DifficultyOption,
+};
+use models::{
+    face::Face,
+    cell::Cell as Cell,
+    mouse_state::MouseState,
+    settings::{Difficulty, Settings, Dimensions},
+};
 use wasm_bindgen::JsCast;
 // use yew::{html, Component, Context, Html, classes};
 use web_sys::{Element, MouseEvent};
@@ -37,6 +42,8 @@ fn App() -> impl IntoView {
     let (settings, set_settings) = create_signal(Settings::default());
     let (interval, set_interval) = create_signal(None::<Interval>);
 
+    let handle_reset = move || {};
+
     let handle_change_size = move |difficulty: Difficulty| {
         log!("current size: {:?}", settings().dimensions());
         set_settings.update(|settings| { settings.set_difficulty(difficulty) });
@@ -58,7 +65,7 @@ fn App() -> impl IntoView {
         set_mine_indices.update(|indices|
             *indices = vec![0; dimensions.mines()]
         );
-        // handle_reset();
+        handle_reset();
     };
 
     log!("App!");
@@ -85,6 +92,22 @@ fn App() -> impl IntoView {
                     settings
                     on_difficulty_selected=handle_change_size
                 />
+            </div>
+
+            <div class="header">
+                <Counter value=Signal::derive(move || {42} /* mines_remaining */ )/>
+                <div id="resetButtonContainer" class="center">
+                    <span id="resetButton" on:click=move |_| handle_reset()>{ move || face().to_str() }</span>
+                </div>
+                <Counter value=seconds_played />
+            </div>
+
+            <div class="board-container">
+                <table id="board" class="board"
+                    on:contextmenu=move |e: MouseEvent| e.prevent_default()
+                >
+                    <CellGrid grid settings />
+                </table>
             </div>
         </div>
     }
