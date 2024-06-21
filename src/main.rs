@@ -26,7 +26,12 @@ use std::{collections::HashSet, cmp};
 fn App() -> impl IntoView {
     type CellGrid = Vec<(ReadSignal<Cell>, WriteSignal<Cell>)>;
 
-    let grid: CellGrid = vec![];
+    let default_difficulty = Difficulty::Beginner;
+    let default_grid_area = default_difficulty.dimensions().width()
+        * default_difficulty.dimensions().height();
+    let grid: CellGrid = (0..default_grid_area)
+        .map(|_| create_signal(Cell::new_empty()))
+        .collect();
     let mine_indices: Vec<usize> = vec![];
     let neighbors: Vec<HashSet<usize>> = vec![];
     let (active, set_active) = create_signal(false);
@@ -46,24 +51,22 @@ fn App() -> impl IntoView {
 
     let handle_change_size = move |difficulty: Difficulty| {
         log!("current size: {:?}", settings().dimensions());
-        set_settings.update(|settings| { settings.set_difficulty(difficulty) });
+        set_settings.update(|s| { s.set_difficulty(difficulty) });
         log!("changing size to: {:?}", settings().dimensions());
         let dimensions = difficulty.dimensions();
         let grid_area = dimensions.width() * dimensions.height();
-        set_grid.update(|grid|
-            *grid = vec![
-                create_signal(Cell::new_empty());
-                grid_area
-            ]
+        set_grid.set(
+            (0..grid_area)
+                .map(|_| create_signal(Cell::new_empty()))
+                .collect()
         );
-        set_neighbors.update(|neighbors|
-            *neighbors = vec![
-                HashSet::new();
-                grid_area
-            ]
+        set_neighbors.set(
+            (0..grid_area)
+                .map(|_| HashSet::new())
+                .collect()
         );
-        set_mine_indices.update(|indices|
-            *indices = vec![0; dimensions.mines()]
+        set_mine_indices.set(
+            vec![0; dimensions.mines()]
         );
         handle_reset();
     };

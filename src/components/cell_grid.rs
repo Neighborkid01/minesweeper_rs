@@ -1,5 +1,4 @@
 use leptos::*;
-use leptos::logging::*;
 // use web_sys::MouseEvent;
 use crate::components::cell_row::CellRow;
 use crate::models::{cell::Cell, settings::Settings};
@@ -10,32 +9,20 @@ pub fn CellGrid(
     settings: ReadSignal<Settings>,
 ) -> impl IntoView {
     let rows = move || {
-        with! { |grid, settings|
-            grid.chunks(settings.dimensions().width())
+        with! { |grid|
+            grid.chunks(settings.with(|s| s.dimensions().width()))
                 .enumerate()
                 .map(|(i, cells)| {
                     let cells = cells.to_vec();
-                    let len = cells.len();
-                    // Ok this makes no sense. if len is in the key it works otherwise it doesn't...
-                    let key = format!("{}-{}-{}-{}", len, settings.dimensions().width(), settings.dimensions().height(), i);
-                    (key, i, len, cells)
+                    view! {
+                        <tr class="game-row">
+                            <CellRow row=cells y=i settings />
+                        </tr>
+                    }
                 })
-                .collect::<Vec<(String, usize, usize, Vec<(ReadSignal<Cell>, WriteSignal<Cell>)>)>>()
+                .collect_view()
         }
     };
 
-    view! {
-        <For
-            each=rows
-            key=|tuple| tuple.0.clone()
-            children=move |(key, y, len, row)| {
-                view! {
-                    <tr key={key} id={len} class="game-row">
-                        <div>{format!("{}", row.len())}</div>
-                        <CellRow row y settings />
-                    </tr>
-                }
-            }
-        />
-    }
+    rows
 }

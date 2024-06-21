@@ -15,10 +15,10 @@ impl Default for Face {
 impl Face {
     pub fn to_str(&self) -> &'static str {
         match self {
-            Face::Happy     => "🙂",
-            Face::Nervous   => "😬",
-            Face::Dead      => "😵",
-            Face::Cool      => "😎",
+            Face::Happy => "🙂",
+            Face::Nervous => "😬",
+            Face::Dead => "😵",
+            Face::Cool => "😎",
         }
     }
 }
