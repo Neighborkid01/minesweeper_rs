@@ -13,14 +13,14 @@ pub fn Cell(
     view! {
         <td key={index} class="cell-border">
             <div
-                class=move || format!("cell {}", cell.with(|c| c.color().to_string()))
+                class=move || cell.with(|c| format!("cell {}", c.color().to_string()))
+                class:clicked=move || cell.with(|c| c.is_shown())
                 on:click=move |e| {
                     handle_click(e, index);
                     set_cell.update(|cell| cell.handle_click());
                 }
             >
-                // {move || cell().get_value_display_string()}
-                {index}
+                {move || cell.with(|c| c.value_display_string())}
             </div>
         </td>
     }

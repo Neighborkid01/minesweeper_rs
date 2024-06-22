@@ -13,7 +13,7 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn get_name_string(&self) -> String {
+    pub fn name_string(&self) -> String {
         match self {
             Value::Mine     => String::from(""),
             Value::Zero     => String::from(""),
@@ -38,7 +38,7 @@ pub enum DisplayState {
 }
 
 impl DisplayState {
-    pub fn get_display_string(&self) -> String {
+    pub fn display_string(&self) -> String {
         match self {
             DisplayState::Default => " ",
             DisplayState::Flagged => "🚩",
@@ -137,14 +137,14 @@ impl Cell {
         self.set_display(DisplayState::Flagged);
     }
 
-    pub fn get_value_display_string(&self) -> String {
-        self.display.get_display_string().into()
+    pub fn value_display_string(&self) -> String {
+        self.display.display_string().into()
     }
 
     // Private methods
     fn set_display(&mut self, display: DisplayState) {
         self.display = display;
-        self.color = if self.is_shown() { self.value.get_name_string() } else { "".to_string() };
+        self.color = if self.is_shown() { self.value.name_string() } else { "".to_string() };
     }
 
     fn set_value(&mut self, value: Value) {
