@@ -1,5 +1,3 @@
-// use gloo_console as console;
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Value {
     Mine,

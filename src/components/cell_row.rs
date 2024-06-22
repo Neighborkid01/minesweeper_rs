@@ -1,5 +1,5 @@
 use leptos::*;
-// use web_sys::MouseEvent;
+use web_sys::MouseEvent;
 use crate::models::{cell::Cell, settings::Settings};
 use crate::components::cell::Cell;
 
@@ -8,6 +8,7 @@ pub fn CellRow(
     row: Vec<(ReadSignal<Cell>, WriteSignal<Cell>)>,
     y: usize,
     settings: ReadSignal<Settings>,
+    handle_click: impl Fn(MouseEvent, usize) + 'static + Copy,
 ) -> impl IntoView {
     let row_cells = move || {
         row.iter()
@@ -16,7 +17,11 @@ pub fn CellRow(
             .map(|(x, cell)| {
                 let index = x + (y * settings.with(|s| s.dimensions().width()));
                 view! {
-                    <Cell index cell />
+                    <Cell
+                        index
+                        cell
+                        handle_click
+                    />
                 }
             })
             .collect_view()

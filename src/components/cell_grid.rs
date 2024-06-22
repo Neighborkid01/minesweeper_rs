@@ -1,5 +1,5 @@
 use leptos::*;
-// use web_sys::MouseEvent;
+use web_sys::MouseEvent;
 use crate::components::cell_row::CellRow;
 use crate::models::{cell::Cell, settings::Settings};
 
@@ -7,6 +7,7 @@ use crate::models::{cell::Cell, settings::Settings};
 pub fn CellGrid(
     grid: ReadSignal<Vec<(ReadSignal<Cell>, WriteSignal<Cell>)>>,
     settings: ReadSignal<Settings>,
+    handle_click: impl Fn(MouseEvent, usize) + 'static + Copy,
 ) -> impl IntoView {
     let rows = move || {
         with! { |grid|
@@ -16,7 +17,12 @@ pub fn CellGrid(
                     let cells = cells.to_vec();
                     view! {
                         <tr class="game-row">
-                            <CellRow row=cells y=i settings />
+                            <CellRow
+                                row=cells
+                                y=i
+                                settings
+                                handle_click
+                            />
                         </tr>
                     }
                 })

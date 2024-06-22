@@ -1,5 +1,8 @@
 mod components;
 mod models;
+mod lib {
+    pub mod game_state;
+}
 
 use leptos::*;
 use leptos::logging::*;
@@ -8,6 +11,8 @@ use components::{
     counter::Counter,
     difficulty_option::DifficultyOption,
 };
+use leptos_dom::helpers::IntervalHandle;
+use lib::game_state::*;
 use models::{
     face::Face,
     cell::Cell as Cell,
@@ -15,10 +20,7 @@ use models::{
     settings::{Difficulty, Settings, Dimensions},
 };
 use wasm_bindgen::JsCast;
-// use yew::{html, Component, Context, Html, classes};
 use web_sys::{Element, MouseEvent};
-// use gloo_console as console;
-use gloo::timers::callback::Interval;
 use rand::Rng;
 use std::{collections::HashSet, cmp};
 
@@ -45,9 +47,7 @@ fn App() -> impl IntoView {
     let (seconds_played, set_seconds_played) = create_signal(0);
     let (mouse_state, set_mouse_state) = create_signal(MouseState::default());
     let (settings, set_settings) = create_signal(Settings::default());
-    let (interval, set_interval) = create_signal(None::<Interval>);
-
-    let handle_reset = move || {};
+    let (interval, set_interval) = create_signal(None::<leptos_dom::helpers::IntervalHandle>);
 
     let handle_change_size = move |difficulty: Difficulty| {
         log!("current size: {:?}", settings().dimensions());
@@ -55,12 +55,12 @@ fn App() -> impl IntoView {
         log!("changing size to: {:?}", settings().dimensions());
         let dimensions = difficulty.dimensions();
         let grid_area = dimensions.width() * dimensions.height();
-        set_grid.set(
+        set_grid(
             (0..grid_area)
                 .map(|_| create_signal(Cell::new_empty()))
                 .collect()
         );
-        set_neighbors.set(
+        set_neighbors(
             (0..grid_area)
                 .map(|_| HashSet::new())
                 .collect()
@@ -69,6 +69,19 @@ fn App() -> impl IntoView {
             vec![0; dimensions.mines()]
         );
         handle_reset();
+    };
+
+    let tick = move || {
+        log!("tick {}", seconds_played());
+        set_seconds_played.update(|s| *s += 1);
+    };
+
+
+    let handle_click = move |_e: MouseEvent, index: usize| {
+        log!("index: {}", index);
+        if interval.with(|i| i.is_none()) {
+            start_interval(set_interval, tick);
+        }
     };
 
     log!("App!");
@@ -109,7 +122,11 @@ fn App() -> impl IntoView {
                 <table id="board" class="board"
                     on:contextmenu=move |e: MouseEvent| e.prevent_default()
                 >
-                    <CellGrid grid settings />
+                    <CellGrid
+                        grid
+                        settings
+                        handle_click
+                    />
                 </table>
             </div>
         </div>
