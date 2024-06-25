@@ -49,7 +49,6 @@ fn App() -> impl IntoView {
     let (grid, set_grid) = create_signal(grid);
     let (neighbors, set_neighbors) = create_signal(neighbors);
     let (mine_indices, set_mine_indices) = create_signal(mine_indices);
-    let (shown_cells_count, set_shown_cells_count) = create_signal(0); // should be derived
     let (selected_cell_index, set_selected_cell_index) = create_signal(None::<usize>);
     let (first_clicked_mine_index, set_first_clicked_mine_index) = create_signal(None::<usize>);
     let (seconds_played, set_seconds_played) = create_signal(0);
@@ -57,6 +56,35 @@ fn App() -> impl IntoView {
     let (settings, set_settings) = create_signal(Settings::default());
     let (interval, set_interval) = create_signal(None::<leptos_dom::helpers::IntervalHandle>);
     let grid_area = move || settings.with(|s| s.dimensions().width() * s.dimensions().height());
+
+    let shown_cells_count = move || {
+        let temp = grid.with(|g|
+            g.iter()
+                .filter(|(cell, _)| cell.with(|c| c.is_shown()))
+                .count()
+        );
+        log!("shown_cells_count {}", temp);
+        temp
+    };
+
+    let flagged_mines_count = move || {
+        let temp = grid.with(|g|
+            g.iter()
+                .filter(|(cell, _)| cell.with(|c| c.is_flagged()))
+                .count()
+        );
+        log!("flagged_mines_count {}", temp);
+        temp
+    };
+
+    let mines_remaining = move || {
+        let temp = cmp::max(
+            mine_indices.with(|mine_inds| mine_inds.len()) as isize - flagged_mines_count() as isize,
+            -99
+        );
+        log!("mines_remaining {}", temp);
+        temp
+    };
 
     let clear_interval = move || {
         set_interval.update(|i| {
@@ -83,10 +111,9 @@ fn App() -> impl IntoView {
     let handle_reset = move || {
         clear_interval();
         set_seconds_played(0);
-        set_shown_cells_count(0); // should be derived
         clear_cells();
         set_first_clicked_mine_index(None);
-        // set_active(true);
+        set_active(true);
     };
 
     let tick = move || {
@@ -218,13 +245,55 @@ fn App() -> impl IntoView {
         set_mine_indices(new_mine_indices);
     };
 
+    let click_all_mines = move || {
+
+    };
+
+    let click_neighboring_empty_cells = move |e: MouseEvent, index: usize| {
+        // let neighbors = self.neighbors[index].clone();
+        for index in neighbors.with(|n| n[index]) {
+            handle_click(e, index);
+        }
+    };
+
     let handle_click = move |_e: MouseEvent, index: usize| {
+        if !active() { return; }
+
         log!("index: {}", index);
         if interval.with(|i| i.is_none()) {
-            // set_active(true);
-            start_interval();
             generate_cells(index);
+            start_interval();
         }
+
+        let (cell, set_cell) = grid.with(|g| g[index]);
+        cell.with(|c| {
+            if c.is_shown() || c.is_flagged() {
+                set_face(Face::Happy);
+                return;
+            }
+        });
+
+        set_cell.update(|c| c.handle_click());
+
+        if cell.with(|c| c.is_mine()) {
+            let Some(selected_index) = selected_cell_index() else { return; };
+            if first_clicked_mine_index.with(|i| i.is_none()) &&
+                (index == selected_index || neighbors.with(|n| n[selected_index].contains(&index)))
+            {
+                set_first_clicked_mine_index(Some(index));
+                click_all_mines();
+                set_active(false);
+                set_face(Face::Dead);
+                set_interval(None);
+            }
+            return;
+        }
+
+        set_face(Face::Happy);
+
+        // Recursively click all neighboring cells if we clicked a 0
+        if cell.with(|c| c.is_zero()) { click_neighboring_empty_cells(index); }
+        self.check_for_win();
     };
 
     log!("App!");
@@ -254,7 +323,7 @@ fn App() -> impl IntoView {
             </div>
 
             <div class="header">
-                <Counter value=Signal::derive(move || {42} /* mines_remaining */ )/>
+                <Counter value=Signal::derive(move || mines_remaining())/>
                 <div id="resetButtonContainer" class="center">
                     <span id="resetButton" on:click=move |_| handle_reset()>
                         { move || face().to_str() }
