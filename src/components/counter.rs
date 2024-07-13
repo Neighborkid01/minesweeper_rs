@@ -2,9 +2,7 @@ use leptos::*;
 
 #[component]
 pub fn Counter(
-    #[prop(into)]
-    #[prop(optional)]
-    value: Signal<isize>,
+    value: impl Fn() -> isize + 'static,
 ) -> impl IntoView {
     view! {
         <div class="counter">

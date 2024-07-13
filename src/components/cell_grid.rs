@@ -1,13 +1,13 @@
 use leptos::*;
-use web_sys::MouseEvent;
+// use web_sys::MouseEvent;
 use crate::components::cell_row::CellRow;
 use crate::models::{cell::Cell, settings::Settings};
 
 #[component]
 pub fn CellGrid(
-    grid: ReadSignal<Vec<(ReadSignal<Cell>, WriteSignal<Cell>)>>,
+    grid: ReadSignal<Vec<RwSignal<Cell>>>,
     settings: ReadSignal<Settings>,
-    handle_click: impl Fn(MouseEvent, usize) + 'static + Copy,
+    handle_click: impl Fn(usize) + 'static + Copy,
 ) -> impl IntoView {
     let rows = move || {
         with! { |grid|
