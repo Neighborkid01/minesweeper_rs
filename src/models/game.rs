@@ -44,14 +44,20 @@ impl Game {
         let default_grid_area = default_difficulty.dimensions().width()
             * default_difficulty.dimensions().height();
         let grid: CellGrid = (0..default_grid_area)
-            .map(|_| Cell::new_empty())
+            .map(|_| {
+                let mut cell = Cell::new_empty();
+                cell.reset();
+                cell
+            })
             .collect::<Vec<_>>()
             .from_vec();
         let mine_indices: Vec<usize> = vec![0; default_difficulty.dimensions().mines()];
-        let neighbors: Vec<HashSet<usize>> = vec![];
+        let neighbors: Vec<HashSet<usize>> = (0..default_grid_area)
+            .map(|_| HashSet::new())
+            .collect();
 
         Game {
-            active: create_rw_signal(false),
+            active: create_rw_signal(true),
             face: create_rw_signal(Face::default()),
             grid: create_rw_signal(grid),
             neighbors: create_rw_signal(neighbors),
@@ -108,16 +114,18 @@ impl Game {
 
     pub fn clear_cells(&self) {
         log!("clear_cells");
-        self.grid.update(|g|
-            g.iter_mut()
-                .for_each(|cell| cell.update(|c| c.reset()))
-        );
-        log!("set_mines");
-        self.mine_indices.update(|mine_inds|
-            *mine_inds = (0..mine_inds.len())
-                .map(|_| 0)
-                .collect()
-        );
+        batch(|| {
+            self.grid.update(|g|
+                g.iter()
+                    .for_each(|cell| cell.update(|c| c.reset()))
+            );
+            log!("set_mines");
+            self.mine_indices.update(|mine_inds|
+                *mine_inds = (0..mine_inds.len())
+                    .map(|_| 0)
+                    .collect()
+            );
+        });
     }
 
     pub fn handle_reset(&self) {
