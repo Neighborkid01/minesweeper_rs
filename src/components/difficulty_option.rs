@@ -4,7 +4,8 @@ use crate::models::settings::{Difficulty, Settings};
 #[component]
 pub fn DifficultyOption(
     on_difficulty_selected: impl Fn(Difficulty) + 'static,
-    settings: ReadSignal<Settings>,
+    #[prop(into)]
+    settings: Signal<Settings>,
     difficulty_to_display: Difficulty,
 ) -> impl IntoView {
     view! {

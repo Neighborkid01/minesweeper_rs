@@ -5,8 +5,10 @@ use crate::models::{cell::Cell, settings::Settings};
 
 #[component]
 pub fn CellGrid(
-    grid: ReadSignal<Vec<RwSignal<Cell>>>,
-    settings: ReadSignal<Settings>,
+    #[prop(into)]
+    grid: Signal<Vec<RwSignal<Cell>>>,
+    #[prop(into)]
+    settings: Signal<Settings>,
     handle_click: impl Fn(usize) + 'static + Copy,
 ) -> impl IntoView {
     let rows = move || {

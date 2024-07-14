@@ -7,7 +7,8 @@ use crate::components::cell::Cell;
 pub fn CellRow(
     row: Vec<RwSignal<Cell>>,
     y: usize,
-    settings: ReadSignal<Settings>,
+    #[prop(into)]
+    settings: Signal<Settings>,
     handle_click: impl Fn(usize) + 'static + Copy,
 ) -> impl IntoView {
     let row_cells = move || {
