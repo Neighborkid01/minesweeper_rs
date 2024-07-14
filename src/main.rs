@@ -25,6 +25,8 @@ type CellGrid = Vec<RwSignal<Cell>>;
 
 #[component]
 fn App() -> impl IntoView {
+    console_error_panic_hook::set_once();
+
     let game = create_rw_signal(Game::new());
 
     let settings = Signal::derive(move || game.with(|g| g.settings.get()));
