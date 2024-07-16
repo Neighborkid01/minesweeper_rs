@@ -71,11 +71,11 @@ impl Game {
         }
     }
 
-    pub fn grid_area(&self) -> usize {
+    fn grid_area(&self) -> usize {
         self.settings.with(|s| s.dimensions().width() * s.dimensions().height())
     }
 
-    pub fn shown_cells_count(&self) -> usize {
+    fn shown_cells_count(&self) -> usize {
         let temp = self.grid.with(|g|
             g.iter()
                 .filter(|cell| cell.with(|c| c.is_shown()))
@@ -85,7 +85,7 @@ impl Game {
         temp
     }
 
-    pub fn flagged_mines_count(&self) -> usize {
+    fn flagged_mines_count(&self) -> usize {
         let temp = self.grid.with(|g|
             g.iter()
                 .filter(|cell| cell.with(|c| c.is_flagged()))
@@ -104,7 +104,7 @@ impl Game {
         temp
     }
 
-    pub fn clear_interval(&self) {
+    fn clear_interval(&self) {
         self.interval.update(|i| {
             if let Some(interval_handle) = i.take() {
                 interval_handle.clear();
@@ -112,7 +112,7 @@ impl Game {
         });
     }
 
-    pub fn clear_cells(&self) {
+    fn clear_cells(&self) {
         log!("clear_cells");
         batch(|| {
             self.grid.update(|g|
@@ -142,11 +142,11 @@ impl Game {
         log!("active set to true");
     }
 
-    pub fn tick(&self) {
+    fn tick(&self) {
         self.seconds_played.update(|s| *s += 1);
     }
 
-    pub fn start_interval(&self, tick: impl Fn() + 'static) {
+    fn start_interval(&self, tick: impl Fn() + 'static) {
         self.interval.update(|i| {
             if i.is_some() {
                 log!("Interval already started");
@@ -184,7 +184,7 @@ impl Game {
         self.handle_reset();
     }
 
-    pub fn get_row_col_from_index(&self, index: usize) -> (usize, usize) {
+    fn get_row_col_from_index(&self, index: usize) -> (usize, usize) {
         self.settings.with(|s| {
             let row = index / s.dimensions().width();
             let col = index % s.dimensions().width();
@@ -193,7 +193,7 @@ impl Game {
         })
     }
 
-    pub fn get_index_from_row_col(&self, row: isize, col: isize) -> Option<usize> {
+    fn get_index_from_row_col(&self, row: isize, col: isize) -> Option<usize> {
         self.settings.with(|s| {
             let u_row = row as usize;
             let u_col = col as usize;
@@ -207,7 +207,7 @@ impl Game {
         })
     }
 
-    pub fn index_can_be_mine(
+    fn index_can_be_mine(
         &self,
         index_clicked: usize,
         mine_index: usize,
@@ -220,7 +220,7 @@ impl Game {
         true
     }
 
-    pub fn calculate_neighbors(&self, index: usize) -> HashSet<usize> {
+    fn calculate_neighbors(&self, index: usize) -> HashSet<usize> {
         let (row, col) = self.get_row_col_from_index(index);
         let mut neighbors: HashSet<usize> = HashSet::new();
         let r = row as isize;
@@ -238,12 +238,12 @@ impl Game {
         neighbors
     }
 
-    pub fn get_random_cell_index(&self) -> usize {
+    fn get_random_cell_index(&self) -> usize {
         let mut rng = rand::thread_rng();
         rng.gen_range(0..self.grid_area())
     }
 
-    pub fn generate_cells(&self, index_clicked: usize) {
+    fn generate_cells(&self, index_clicked: usize) {
         let mut new_cells: Vec<Cell> = vec![];
         let mut new_neighbors: Vec<HashSet<usize>> = vec![];
         let mut new_mine_indices: Vec<usize> = vec![];
@@ -278,10 +278,10 @@ impl Game {
         self.mine_indices.set(new_mine_indices);
     }
 
-    pub fn click_all_mines(&self) {
+    fn click_all_mines(&self) {
     }
 
-    pub fn click_neighboring_empty_cells(&self, index: usize, tick: impl Fn() + 'static + Copy) {
+    fn click_neighboring_empty_cells(&self, index: usize, tick: impl Fn() + 'static + Copy) {
         for i in self.neighbors.with(|n| n[index].clone()) {
             self.handle_click(i, tick);
         }
