@@ -14,7 +14,7 @@ impl Default for Dimensions {
 }
 
 impl Dimensions {
-    pub fn new(width: usize, height: usize, mines: usize) -> Self { // This should not stay public
+    fn new(width: usize, height: usize, mines: usize) -> Self {
         let w = if width  > MAX_WIDTH  { MAX_WIDTH }  else { width };
         let h = if height > MAX_HEIGHT { MAX_HEIGHT } else { height };
         let m = if mines  > MAX_MINES  { MAX_MINES }  else { mines };
@@ -70,7 +70,6 @@ impl Difficulty {
     }
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct DifficultySetting {
     difficulty: Difficulty,
@@ -101,7 +100,6 @@ impl DifficultySetting {
     }
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ChordSetting {
     LeftClick,
@@ -113,7 +111,6 @@ impl Default for ChordSetting {
     fn default() -> Self { ChordSetting::LeftClick }
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FirstClickSetting {
     Any,

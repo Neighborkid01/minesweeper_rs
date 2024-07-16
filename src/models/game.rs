@@ -76,32 +76,26 @@ impl Game {
     }
 
     fn shown_cells_count(&self) -> usize {
-        let temp = self.grid.with(|g|
+        self.grid.with(|g|
             g.iter()
                 .filter(|cell| cell.with(|c| c.is_shown()))
                 .count()
-        );
-        log!("shown_cells_count {}", temp);
-        temp
+        )
     }
 
     fn flagged_mines_count(&self) -> usize {
-        let temp = self.grid.with(|g|
+        self.grid.with(|g|
             g.iter()
                 .filter(|cell| cell.with(|c| c.is_flagged()))
                 .count()
-        );
-        log!("flagged_mines_count {}", temp);
-        temp
+        )
     }
 
     pub fn mines_remaining(&self) -> isize {
-        let temp = cmp::max(
+        cmp::max(
             self.mine_indices.with(Vec::len) as isize - self.flagged_mines_count() as isize,
             -99
-        );
-        log!("mines_remaining {}", temp);
-        temp
+        )
     }
 
     fn clear_interval(&self) {
@@ -113,13 +107,11 @@ impl Game {
     }
 
     fn clear_cells(&self) {
-        log!("clear_cells");
         batch(|| {
             self.grid.update(|g|
                 g.iter()
                     .for_each(|cell| cell.update(|c| c.reset()))
             );
-            log!("set_mines");
             self.mine_indices.update(|mine_inds|
                 *mine_inds = (0..mine_inds.len())
                     .map(|_| 0)
@@ -129,29 +121,16 @@ impl Game {
     }
 
     pub fn handle_reset(&self) {
-        log!("handle_reset");
         self.clear_interval();
-        log!("interval cleared");
         self.seconds_played.set(0);
-        log!("seconds_played reset");
         self.clear_cells();
-        log!("cells cleared");
         self.first_clicked_mine_index.set(None);
-        log!("first_clicked_mine_index reset");
         self.active.set(true);
-        log!("active set to true");
-    }
-
-    fn tick(&self) {
-        self.seconds_played.update(|s| *s += 1);
     }
 
     fn start_interval(&self, tick: impl Fn() + 'static) {
         self.interval.update(|i| {
-            if i.is_some() {
-                log!("Interval already started");
-                return;
-            }
+            if i.is_some() { return; }
             *i = match set_interval_with_handle(tick, Duration::from_secs(1)) {
                 Ok(interval_handle) => Some(interval_handle),
                 Err(e) => {
@@ -163,9 +142,7 @@ impl Game {
     }
 
     pub fn handle_change_size(&self, difficulty: Difficulty) {
-        log!("current size: {:?}", self.settings.with(|s| s.dimensions()));
         self.settings.update(|s| s.set_difficulty(difficulty));
-        log!("changing size to: {:?}", self.settings.with(|s| s.dimensions()));
         let dimensions = difficulty.dimensions();
         let area = self.grid_area();
         self.grid.set(
@@ -257,7 +234,6 @@ impl Game {
             }
             current_mine_indices.insert(i);
         }
-        log!("current_mine_indices: {:?}", current_mine_indices);
 
         for cell_index in 0..self.grid_area() {
             let neighboring_cells = self.calculate_neighbors(cell_index);
@@ -272,7 +248,6 @@ impl Game {
             if current_mine_indices.contains(&cell_index) { new_mine_indices.push(cell_index); }
         }
 
-        log!("new_cells: {:?}", new_cells);
         self.grid.set(new_cells.from_vec());
         self.neighbors.set(new_neighbors);
         self.mine_indices.set(new_mine_indices);
@@ -290,7 +265,6 @@ impl Game {
     pub fn handle_click(&self, index: usize, tick: impl Fn() + 'static + Copy) {
         if !self.active.get() { return; }
 
-        log!("index: {}", index);
         if self.interval.with(Option::is_none) {
             self.generate_cells(index);
             self.start_interval(tick);
@@ -324,6 +298,29 @@ impl Game {
 
         // Recursively click all neighboring cells if we clicked a 0
         if cell.is_zero() { self.click_neighboring_empty_cells(index, tick); }
-        // self.check_for_win();
+        self.check_for_win();
+    }
+
+    fn check_for_win(&self) {
+        if self.shown_cells_count() + self.mine_indices.with(Vec::len) == self.grid.with(Vec::len) {
+            self.handle_win();
+        }
+    }
+
+    fn handle_win(&self) {
+        self.active.set(false);
+        self.face.set(Face::Cool);
+        self.flag_all_mines();
+        self.clear_interval();
+    }
+
+    fn flag_all_mines(&self) {
+        self.mine_indices.with(|mine_inds| {
+            for index in mine_inds {
+                self.grid.with(|g|
+                    g[*index].update(|cell| cell.set_display_to_flagged())
+                );
+            }
+        })
     }
 }
