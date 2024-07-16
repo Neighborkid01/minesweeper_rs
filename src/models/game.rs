@@ -146,13 +146,13 @@ impl Game {
         self.seconds_played.update(|s| *s += 1);
     }
 
-    pub fn start_interval(&self, closure: impl Fn() + 'static) {
+    pub fn start_interval(&self, tick: impl Fn() + 'static) {
         self.interval.update(|i| {
             if i.is_some() {
                 log!("Interval already started");
                 return;
             }
-            *i = match set_interval_with_handle(closure, Duration::from_secs(1)) {
+            *i = match set_interval_with_handle(tick, Duration::from_secs(1)) {
                 Ok(interval_handle) => Some(interval_handle),
                 Err(e) => {
                     error!("Error starting interval: {:?}", e);
@@ -281,19 +281,19 @@ impl Game {
     pub fn click_all_mines(&self) {
     }
 
-    pub fn click_neighboring_empty_cells(&self, index: usize) {
-        for _i in self.neighbors.with(|n| n[index].clone()) {
-            self.handle_click(index);
+    pub fn click_neighboring_empty_cells(&self, index: usize, tick: impl Fn() + 'static + Copy) {
+        for i in self.neighbors.with(|n| n[index].clone()) {
+            self.handle_click(i, tick);
         }
     }
 
-    pub fn handle_click(&self, index: usize) {
+    pub fn handle_click(&self, index: usize, tick: impl Fn() + 'static + Copy) {
         if !self.active.get() { return; }
 
         log!("index: {}", index);
         if self.interval.with(Option::is_none) {
             self.generate_cells(index);
-            // self.start_interval(move || self.tick());
+            self.start_interval(tick);
         }
 
         let cell = self.grid.with(|g| g[index]);
@@ -323,7 +323,7 @@ impl Game {
         self.face.set(Face::Happy);
 
         // Recursively click all neighboring cells if we clicked a 0
-        if cell.is_zero() { self.click_neighboring_empty_cells(index); }
+        if cell.is_zero() { self.click_neighboring_empty_cells(index, tick); }
         // self.check_for_win();
     }
 }

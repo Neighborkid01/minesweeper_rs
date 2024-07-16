@@ -28,6 +28,7 @@ fn App() -> impl IntoView {
     console_error_panic_hook::set_once();
 
     let game = create_rw_signal(Game::new());
+    let tick = move || game.with(|g| g.seconds_played.update(|s| *s += 1));
 
     let settings = Signal::derive(move || game.with(|g| g.settings.get()));
     let on_difficulty_selected = move |difficulty: Difficulty| game.with(|g| g.handle_change_size(difficulty));
@@ -38,7 +39,7 @@ fn App() -> impl IntoView {
     let seconds_played = move || game.with(|g| g.seconds_played.get());
 
     let grid = Signal::derive(move || game.with(|g| g.grid.get()));
-    let handle_click = move |index: usize| game.with(|g| g.handle_click(index));
+    let handle_click = move |index: usize| game.with(|g| g.handle_click(index, tick));
 
     log!("App!");
     view! {
