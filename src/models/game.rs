@@ -254,32 +254,47 @@ impl Game {
     }
 
     fn click_all_mines(&self) {
-        for i in 0..self.mine_indices.with(Vec::len) {
-            let index = self.mine_indices.with(|mine_inds| mine_inds[i]);
-            self.grid.with(|g| g[index].update(|c| c.handle_click()));
-        }
+        batch(|| {
+            let (mine_inds, g, first_mine_index) = (self.mine_indices, self.grid, self.first_clicked_mine_index);
+            with! { |mine_inds, g, first_mine_index|
+                for &index in mine_inds.iter() {
+                    g[index].update(|c| {
+                        c.handle_click();
+                        if *first_mine_index == Some(index) { c.mark_as_first_clicked_mine(); }
+                    });
+                }
+            }
+        });
     }
 
     fn click_neighboring_empty_cells(&self, index: usize, tick: impl Fn() + 'static + Copy) {
-        let mut cells_to_process: Vec<usize> = vec![index];
-        let mut processed_cells: HashSet<usize> = HashSet::new();
+        let mut to_reveal = HashSet::new();
+        let mut queue = vec![index];
 
-        while let Some(current_index) = cells_to_process.pop() {
-            if processed_cells.contains(&current_index) { continue; }
+        while let Some(current_index) = queue.pop() {
+            if to_reveal.contains(&current_index) { continue; }
+            to_reveal.insert(current_index);
 
-            processed_cells.insert(current_index);
-
-            let cell = self.grid.with(|g| g[current_index]);
-            let cell_data = cell();
-
-            cell.update(|c| c.handle_click());
-            if !cell_data.is_zero() { continue; }
+            let is_zero = self.grid.with(|g| g[current_index].with(|c| c.is_zero()));
+            if !is_zero { continue; }
 
             let neighbors = self.neighbors.with(|n| n[current_index].clone());
-            for neighbor in neighbors {
-                if !processed_cells.contains(&neighbor) { cells_to_process.push(neighbor) }
+            for &neighbor in neighbors.iter() {
+                let should_process = self.grid.with(|g| {
+                    let cell = &g[neighbor];
+                    !cell.with(|c| c.is_shown() || c.is_flagged())
+                });
+                if should_process && !to_reveal.contains(&neighbor) { queue.push(neighbor); }
             }
         }
+
+        batch(|| {
+            self.grid.with(|g| {
+                for cell_index in to_reveal {
+                    g[cell_index].update(|c| c.handle_click());
+                }
+            });
+        });
     }
 
     pub fn handle_click(&self, index: usize, tick: impl Fn() + 'static + Copy) {
@@ -330,12 +345,13 @@ impl Game {
     }
 
     fn flag_all_mines(&self) {
-        self.mine_indices.with(|mine_inds| {
-            for index in mine_inds {
-                self.grid.with(|g|
-                    g[*index].update(|cell| cell.set_display_to_flagged())
-                );
+        batch(|| {
+            let (mine_inds, g) = (self.mine_indices, self.grid);
+            with! { |mine_inds, g|
+                for &index in mine_inds.iter() {
+                    g[index].update(|cell| cell.set_display_to_flagged());
+                }
             }
-        })
+        });
     }
 }
