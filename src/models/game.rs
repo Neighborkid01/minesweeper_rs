@@ -254,6 +254,10 @@ impl Game {
     }
 
     fn click_all_mines(&self) {
+        for i in 0..self.mine_indices.with(Vec::len) {
+            let index = self.mine_indices.with(|mine_inds| mine_inds[i]);
+            self.grid.with(|g| g[index].update(|c| c.handle_click()));
+        }
     }
 
     fn click_neighboring_empty_cells(&self, index: usize, tick: impl Fn() + 'static + Copy) {
@@ -281,16 +285,11 @@ impl Game {
         set_cell.update(|c| c.handle_click());
 
         if cell.is_mine() {
-            let Some(selected_index) = self.selected_cell_index.get() else { return; };
-            if self.first_clicked_mine_index.with(Option::is_none) &&
-                (index == selected_index || self.neighbors.with(|n| n[selected_index].contains(&index)))
-            {
-                self.first_clicked_mine_index.set(Some(index));
-                self.click_all_mines();
-                self.active.set(false);
-                self.face.set(Face::Dead);
-                self.interval.set(None);
-            }
+            self.first_clicked_mine_index.set(Some(index));
+            self.click_all_mines();
+            self.active.set(false);
+            self.face.set(Face::Dead);
+            self.clear_interval();
             return;
         }
 
