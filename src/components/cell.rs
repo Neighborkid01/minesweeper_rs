@@ -14,6 +14,7 @@ pub fn Cell(
             <div
                 class=move || cell.with(|c| format!("cell {}", c.color().to_string()))
                 class:clicked=move || cell.with(|c| c.is_shown())
+                class:mine=move || cell.with(|c| c.is_first_clicked_mine())
                 on:click=move |_e| {
                     handle_click(index);
                     // set_cell.update(|cell| cell.handle_click());

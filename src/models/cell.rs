@@ -66,6 +66,7 @@ pub struct Cell {
     value: Value,
     display: DisplayState,
     color: String,
+    is_first_clicked_mine: bool,
 }
 
 impl Cell {
@@ -76,6 +77,7 @@ impl Cell {
             value,
             display: DisplayState::Default,
             color: "".to_string(),
+            is_first_clicked_mine: false,
         }
     }
 
@@ -90,6 +92,7 @@ impl Cell {
     pub fn reset(&mut self) {
         self.set_value(Value::Zero);
         self.set_display(DisplayState::Default);
+        self.is_first_clicked_mine = false;
     }
 
     pub fn handle_click(&mut self) {
@@ -132,13 +135,20 @@ impl Cell {
         self.value == Value::Zero
     }
 
-
     pub fn set_display_to_flagged(&mut self) {
         self.set_display(DisplayState::Flagged);
     }
 
     pub fn value_display_string(&self) -> String {
         self.display.display_string().into()
+    }
+
+    pub fn mark_as_first_clicked_mine(&mut self) {
+        self.is_first_clicked_mine = true;
+    }
+
+    pub fn is_first_clicked_mine(&self) -> bool {
+        self.is_first_clicked_mine
     }
 
     // Private methods

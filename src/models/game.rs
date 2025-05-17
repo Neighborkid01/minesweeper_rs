@@ -286,6 +286,7 @@ impl Game {
 
         if cell.is_mine() {
             self.first_clicked_mine_index.set(Some(index));
+            set_cell.update(|c| c.mark_as_first_clicked_mine());
             self.click_all_mines();
             self.active.set(false);
             self.face.set(Face::Dead);
