@@ -261,8 +261,24 @@ impl Game {
     }
 
     fn click_neighboring_empty_cells(&self, index: usize, tick: impl Fn() + 'static + Copy) {
-        for i in self.neighbors.with(|n| n[index].clone()) {
-            self.handle_click(i, tick);
+        let mut cells_to_process: Vec<usize> = vec![index];
+        let mut processed_cells: HashSet<usize> = HashSet::new();
+
+        while let Some(current_index) = cells_to_process.pop() {
+            if processed_cells.contains(&current_index) { continue; }
+
+            processed_cells.insert(current_index);
+
+            let cell = self.grid.with(|g| g[current_index]);
+            let cell_data = cell();
+
+            cell.update(|c| c.handle_click());
+            if !cell_data.is_zero() { continue; }
+
+            let neighbors = self.neighbors.with(|n| n[current_index].clone());
+            for neighbor in neighbors {
+                if !processed_cells.contains(&neighbor) { cells_to_process.push(neighbor) }
+            }
         }
     }
 
@@ -296,7 +312,6 @@ impl Game {
 
         self.face.set(Face::Happy);
 
-        // Recursively click all neighboring cells if we clicked a 0
         if cell.is_zero() { self.click_neighboring_empty_cells(index, tick); }
         self.check_for_win();
     }
