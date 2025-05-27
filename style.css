@@ -87,13 +87,10 @@ table {
 }
 
 .cell-border {
-  background-color: grey;
-  min-height: 21px;
-  min-width: 21px;
-  height: 21px;
-  width: 21px;
   text-align: center;
   cursor: default;
+  border: 0.5px solid grey;
+  padding: 0;
 }
 
 .cell {

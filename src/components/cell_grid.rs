@@ -18,7 +18,7 @@ pub fn CellGrid(
                 .map(|(i, cells)| {
                     let cells = cells.to_vec();
                     view! {
-                        <tr class="game-row">
+                        <tr>
                             <CellRow
                                 row=cells
                                 y=i
