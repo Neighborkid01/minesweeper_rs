@@ -11,7 +11,9 @@ pub fn CellGrid(
     settings: Signal<Settings>,
     handle_click: impl Fn(usize) + 'static + Copy,
 ) -> impl IntoView {
-    let rows = move || {
+    
+
+    move || {
         with! { |grid|
             grid.chunks(settings.with(|s| s.dimensions().width()))
                 .enumerate()
@@ -30,7 +32,5 @@ pub fn CellGrid(
                 })
                 .collect_view()
         }
-    };
-
-    rows
+    }
 }

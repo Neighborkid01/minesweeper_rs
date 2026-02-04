@@ -35,16 +35,15 @@ impl Dimensions {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Default)]
 pub enum Difficulty {
+    #[default]
     Beginner,
     Intermediate,
     Expert,
     Custom(Dimensions),
 }
 
-impl Default for Difficulty {
-    fn default() -> Self { Difficulty::Beginner }
-}
 
 impl Difficulty {
     pub fn dimensions(&self) -> Dimensions {
@@ -101,26 +100,24 @@ impl DifficultySetting {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Default)]
 pub enum ChordSetting {
+    #[default]
     LeftClick,
     LeftAndRightClick,
     Disabled,
 }
 
-impl Default for ChordSetting {
-    fn default() -> Self { ChordSetting::LeftClick }
-}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Default)]
 pub enum FirstClickSetting {
     Any,
     Safe,
+    #[default]
     Zero,
 }
 
-impl Default for FirstClickSetting {
-    fn default() -> Self { FirstClickSetting::Zero }
-}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Settings {

@@ -140,7 +140,7 @@ impl Cell {
     }
 
     pub fn value_display_string(&self) -> String {
-        self.display.display_string().into()
+        self.display.display_string()
     }
 
     pub fn mark_as_first_clicked_mine(&mut self) {
