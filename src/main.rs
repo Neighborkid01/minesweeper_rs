@@ -41,7 +41,8 @@ fn App() -> impl IntoView {
     let seconds_played = move || game.with(|g| g.seconds_played.get());
 
     let grid = Signal::derive(move || game.with(|g| g.grid.get()));
-    let handle_click = move |index: usize| game.with(|g| g.handle_click(index, tick));
+    let handle_mouse_down = move |index: usize, event: MouseEvent| game.with(|g| g.handle_mouse_down(index, event));
+    let handle_mouse_up = move |index: usize, event: MouseEvent| game.with(|g| g.handle_mouse_up(index, event, tick));
 
     log!("App!");
     view! {
@@ -86,7 +87,8 @@ fn App() -> impl IntoView {
                     <CellGrid
                         grid
                         settings
-                        handle_click
+                        handle_mouse_down
+                        handle_mouse_up
                     />
                 </table>
             </div>

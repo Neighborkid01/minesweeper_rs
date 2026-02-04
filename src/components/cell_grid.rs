@@ -1,5 +1,5 @@
 use leptos::*;
-// use web_sys::MouseEvent;
+use leptos::ev::MouseEvent;
 use crate::components::cell_row::CellRow;
 use crate::models::{cell::Cell, settings::Settings};
 
@@ -9,10 +9,9 @@ pub fn CellGrid(
     grid: Signal<Vec<RwSignal<Cell>>>,
     #[prop(into)]
     settings: Signal<Settings>,
-    handle_click: impl Fn(usize) + 'static + Copy,
+    handle_mouse_down: impl Fn(usize, MouseEvent) + 'static + Copy,
+    handle_mouse_up: impl Fn(usize, MouseEvent) + 'static + Copy,
 ) -> impl IntoView {
-    
-
     move || {
         with! { |grid|
             grid.chunks(settings.with(|s| s.dimensions().width()))
@@ -25,7 +24,8 @@ pub fn CellGrid(
                                 row=cells
                                 y=i
                                 settings
-                                handle_click
+                                handle_mouse_down
+                                handle_mouse_up
                             />
                         </tr>
                     }

@@ -43,7 +43,6 @@ pub enum Difficulty {
     Custom(Dimensions),
 }
 
-
 impl Difficulty {
     pub fn dimensions(&self) -> Dimensions {
         match self {

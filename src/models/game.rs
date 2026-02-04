@@ -3,6 +3,7 @@ use leptos::logging::*;
 use leptos_dom::helpers::IntervalHandle;
 use rand::Rng;
 use std::{cmp, collections::HashSet, time::Duration};
+use web_sys::MouseEvent;
 use crate::{
     CellGrid,
     models::{
@@ -125,6 +126,8 @@ impl Game {
         self.seconds_played.set(0);
         self.clear_cells();
         self.first_clicked_mine_index.set(None);
+        self.mouse_state.set(MouseState::default());
+        self.selected_cell_index.set(None);
         self.active.set(true);
     }
 
@@ -267,7 +270,7 @@ impl Game {
         });
     }
 
-    fn click_neighboring_empty_cells(&self, index: usize, tick: impl Fn() + 'static + Copy) {
+    fn click_neighboring_empty_cells(&self, index: usize) {
         let mut to_reveal = HashSet::new();
         let mut queue = vec![index];
 
@@ -322,13 +325,119 @@ impl Game {
             self.active.set(false);
             self.face.set(Face::Dead);
             self.clear_interval();
+            self.mouse_state.set(MouseState::default());
+            self.selected_cell_index.set(None);
             return;
         }
 
         self.face.set(Face::Happy);
 
-        if cell.is_zero() { self.click_neighboring_empty_cells(index, tick); }
+        if cell.is_zero() { self.click_neighboring_empty_cells(index); }
         self.check_for_win();
+    }
+
+    pub fn handle_right_click(&self, index: usize) {
+        if !self.active.get() { return; }
+
+        let allow_unknown = self.settings.with(|s| s.allow_mark_cell_as_unknown());
+        self.grid.with(|g| {
+            g[index].update(|c| c.cycle_display(allow_unknown));
+        });
+        self.face.set(Face::Happy);
+    }
+
+    pub fn handle_chord(&self, index: usize, tick: impl Fn() + 'static + Copy) {
+        let cell_is_shown = self.grid.with(|g| g[index].with(|c| c.is_shown()));
+        if !cell_is_shown {
+            self.face.set(Face::Happy);
+            return;
+        }
+
+        let neighbors = self.neighbors.with(|n| n[index].clone());
+
+        let (neighboring_mines, neighboring_flags) = self.grid.with(|g| {
+            let mines = neighbors.iter()
+                .filter(|&&idx| g[idx].with(|c| c.is_mine()))
+                .count();
+            let flags = neighbors.iter()
+                .filter(|&&idx| g[idx].with(|c| c.is_flagged()))
+                .count();
+            (mines, flags)
+        });
+
+        if neighboring_mines != neighboring_flags {
+            self.face.set(Face::Happy);
+            return;
+        }
+
+        for neighbor_index in neighbors {
+            self.handle_click(neighbor_index, tick);
+        }
+    }
+
+    pub fn handle_mouse_down(&self, index: usize, event: MouseEvent) {
+        if !self.active.get() { return; }
+
+        self.mouse_state.update(|ms| *ms = ms.mouse_down(event));
+        self.face.set(Face::Nervous);
+
+        self.mouse_state.with(|mouse_state| {
+            match mouse_state {
+                MouseState::Left | MouseState::Both => {
+                    self.selected_cell_index.set(Some(index));
+                },
+                MouseState::Right => {
+                    self.handle_right_click(index);
+                },
+                MouseState::AfterBoth | MouseState::Neither => {}
+            }
+        })
+    }
+
+    pub fn handle_mouse_up(&self, index: usize, event: MouseEvent, tick: impl Fn() + 'static + Copy) {
+        if !self.active.get() { return; }
+
+        let current_mouse_state = self.mouse_state.get();
+        let new_mouse_state = current_mouse_state.mouse_up(event);
+
+        match current_mouse_state {
+            MouseState::AfterBoth | MouseState::Neither => {
+                self.mouse_state.set(new_mouse_state);
+                self.face.set(Face::Happy);
+            },
+            MouseState::Left => {
+                if !new_mouse_state.is_neither() {
+                    self.face.set(Face::Happy);
+                    return;
+                }
+
+                let selected_cell_index = self.selected_cell_index.get();
+                if selected_cell_index != Some(index) {
+                    self.face.set(Face::Happy);
+                    return;
+                }
+
+                let chord_setting = self.settings.with(|s| s.chord_setting());
+                let cell_is_shown = self.grid.with(|g| g[index].with(|c| c.is_shown()));
+                let is_chording = current_mouse_state.is_chording(chord_setting, cell_is_shown);
+
+                self.mouse_state.set(new_mouse_state);
+
+                if is_chording {
+                    self.handle_chord(index, tick);
+                } else {
+                    self.handle_click(index, tick);
+                }
+            },
+            MouseState::Right => {
+                self.mouse_state.set(new_mouse_state);
+                self.face.set(Face::Happy);
+            },
+            MouseState::Both => {
+                self.handle_chord(index, tick);
+                self.mouse_state.set(new_mouse_state);
+            }
+        }
     }
 
     fn check_for_win(&self) {
@@ -342,6 +451,8 @@ impl Game {
         self.face.set(Face::Cool);
         self.flag_all_mines();
         self.clear_interval();
+        self.mouse_state.set(MouseState::default());
+        self.selected_cell_index.set(None);
     }
 
     fn flag_all_mines(&self) {

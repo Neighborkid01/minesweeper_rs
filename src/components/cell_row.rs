@@ -1,5 +1,5 @@
 use leptos::*;
-// use web_sys::MouseEvent;
+use leptos::ev::MouseEvent;
 use crate::models::{cell::Cell, settings::Settings};
 use crate::components::cell::Cell;
 
@@ -9,7 +9,8 @@ pub fn CellRow(
     y: usize,
     #[prop(into)]
     settings: Signal<Settings>,
-    handle_click: impl Fn(usize) + 'static + Copy,
+    handle_mouse_down: impl Fn(usize, MouseEvent) + 'static + Copy,
+    handle_mouse_up: impl Fn(usize, MouseEvent) + 'static + Copy,
 ) -> impl IntoView {
     let row_cells = move || {
         row.iter()
@@ -21,7 +22,8 @@ pub fn CellRow(
                     <Cell
                         index
                         cell
-                        handle_click
+                        handle_mouse_down
+                        handle_mouse_up
                     />
                 }
             })
