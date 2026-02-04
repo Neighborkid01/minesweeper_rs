@@ -131,9 +131,15 @@ impl Game {
         self.active.set(true);
     }
 
-    fn start_interval(&self, tick: impl Fn() + 'static) {
+    fn start_interval(&self) {
+        let seconds_played = self.seconds_played;
         self.interval.update(|i| {
             if i.is_some() { return; }
+            let tick = move || {
+                seconds_played.update(|s| {
+                    *s = if *s >= 999 { 999 } else { *s + 1 };
+                });
+            };
             *i = match set_interval_with_handle(tick, Duration::from_secs(1)) {
                 Ok(interval_handle) => Some(interval_handle),
                 Err(e) => {
@@ -300,12 +306,12 @@ impl Game {
         });
     }
 
-    pub fn handle_click(&self, index: usize, tick: impl Fn() + 'static + Copy) {
+    pub fn handle_click(&self, index: usize) {
         if !self.active.get() { return; }
 
         if self.interval.with(Option::is_none) {
             self.generate_cells(index);
-            self.start_interval(tick);
+            self.start_interval();
         }
 
         let cell = self.grid.with(|g| g[index]);
@@ -346,7 +352,7 @@ impl Game {
         self.face.set(Face::Happy);
     }
 
-    pub fn handle_chord(&self, index: usize, tick: impl Fn() + 'static + Copy) {
+    pub fn handle_chord(&self, index: usize) {
         let cell_is_shown = self.grid.with(|g| g[index].with(|c| c.is_shown()));
         if !cell_is_shown {
             self.face.set(Face::Happy);
@@ -371,7 +377,7 @@ impl Game {
         }
 
         for neighbor_index in neighbors {
-            self.handle_click(neighbor_index, tick);
+            self.handle_click(neighbor_index);
         }
     }
 
@@ -394,7 +400,7 @@ impl Game {
         })
     }
 
-    pub fn handle_mouse_up(&self, index: usize, event: MouseEvent, tick: impl Fn() + 'static + Copy) {
+    pub fn handle_mouse_up(&self, index: usize, event: MouseEvent) {
         if !self.active.get() { return; }
 
         let current_mouse_state = self.mouse_state.get();
@@ -424,9 +430,9 @@ impl Game {
                 self.mouse_state.set(new_mouse_state);
 
                 if is_chording {
-                    self.handle_chord(index, tick);
+                    self.handle_chord(index);
                 } else {
-                    self.handle_click(index, tick);
+                    self.handle_click(index);
                 }
             },
             MouseState::Right => {
@@ -434,7 +440,7 @@ impl Game {
                 self.face.set(Face::Happy);
             },
             MouseState::Both => {
-                self.handle_chord(index, tick);
+                self.handle_chord(index);
                 self.mouse_state.set(new_mouse_state);
             }
         }
