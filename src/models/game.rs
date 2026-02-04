@@ -15,10 +15,10 @@ use crate::{
 };
 
 pub trait FromVec<T> {
-    fn from_vec(&self) -> CellGrid;
+    fn as_grid(&self) -> CellGrid;
 }
 impl FromVec<Cell> for Vec<Cell> {
-    fn from_vec(&self) -> CellGrid {
+    fn as_grid(&self) -> CellGrid {
         self.iter()
             .map(|cell| create_rw_signal(cell.clone()))
             .collect()
@@ -51,7 +51,7 @@ impl Game {
                 cell
             })
             .collect::<Vec<_>>()
-            .from_vec();
+            .as_grid();
         let mine_indices: Vec<usize> = vec![0; default_difficulty.dimensions().mines()];
         let neighbors: Vec<HashSet<usize>> = (0..default_grid_area)
             .map(|_| HashSet::new())
@@ -257,7 +257,7 @@ impl Game {
             if current_mine_indices.contains(&cell_index) { new_mine_indices.push(cell_index); }
         }
 
-        self.grid.set(new_cells.from_vec());
+        self.grid.set(new_cells.as_grid());
         self.neighbors.set(new_neighbors);
         self.mine_indices.set(new_mine_indices);
     }

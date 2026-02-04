@@ -8,18 +8,12 @@ use components::{
     counter::Counter,
     difficulty_option::DifficultyOption,
 };
-use leptos_dom::helpers::IntervalHandle;
 use models::{
     cell::Cell as Cell,
-    face::Face,
     game::*,
-    mouse_state::MouseState,
-    settings::{Difficulty, Settings, Dimensions},
+    settings::{Difficulty, Dimensions},
 };
-use wasm_bindgen::JsCast;
-use web_sys::{Element, MouseEvent};
-use rand::Rng;
-use std::{cmp, collections::HashSet, time::Duration, vec};
+use web_sys::{MouseEvent};
 
 type CellGrid = Vec<RwSignal<Cell>>;
 
@@ -34,7 +28,7 @@ fn App() -> impl IntoView {
 
     let mines_remaining = move || game.with(|g| g.mines_remaining());
     let reset_game = move |_| game.with(|g| g.handle_reset());
-    let face = move || game.with(|g| g.face.get().to_str());
+    let face = move || game.with(|g| g.face.get().as_str());
     let seconds_played = move || game.with(|g| g.seconds_played.get());
 
     let grid = Signal::derive(move || game.with(|g| g.grid.get()));
