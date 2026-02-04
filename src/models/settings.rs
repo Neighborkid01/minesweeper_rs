@@ -34,8 +34,7 @@ impl Dimensions {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[derive(Default)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
 pub enum Difficulty {
     #[default]
     Beginner,
@@ -99,8 +98,7 @@ impl DifficultySetting {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[derive(Default)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
 pub enum ChordSetting {
     #[default]
     LeftClick,
@@ -109,8 +107,7 @@ pub enum ChordSetting {
 }
 
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[derive(Default)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
 pub enum FirstClickSetting {
     Any,
     Safe,
