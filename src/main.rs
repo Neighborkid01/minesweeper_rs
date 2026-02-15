@@ -2,11 +2,11 @@ mod components;
 mod models;
 
 use leptos::*;
-use leptos::logging::*;
 use components::{
     cell_grid::CellGrid,
     counter::Counter,
     difficulty_option::DifficultyOption,
+    mouse_handlers::MouseHandlers,
 };
 use models::{
     cell::Cell as Cell,
@@ -32,10 +32,14 @@ fn App() -> impl IntoView {
     let seconds_played = move || game.with(|g| g.seconds_played.get());
 
     let grid = Signal::derive(move || game.with(|g| g.grid.get()));
-    let handle_mouse_down = move |index: usize, event: MouseEvent| game.with(|g| g.handle_mouse_down(index, event));
-    let handle_mouse_up = move |index: usize, event: MouseEvent| game.with(|g| g.handle_mouse_up(index, event));
 
-    log!("App!");
+    let mouse_handlers = MouseHandlers::new(
+        move |index: usize, event: MouseEvent| game.with(|g| g.handle_mouse_down(index, event)),
+        move |index: usize, event: MouseEvent| game.with(|g| g.handle_mouse_up(index, event)),
+        move || game.with_untracked(|g| g.handle_mouse_leave()),
+    );
+    provide_context(mouse_handlers);
+
     view! {
         <div class="container no-select">
             <div class="settings">
@@ -75,12 +79,7 @@ fn App() -> impl IntoView {
                 <table id="board" class="board"
                     on:contextmenu=move |e: MouseEvent| e.prevent_default()
                 >
-                    <CellGrid
-                        grid
-                        settings
-                        handle_mouse_down
-                        handle_mouse_up
-                    />
+                    <CellGrid grid settings />
                 </table>
             </div>
         </div>

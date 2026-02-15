@@ -391,6 +391,7 @@ impl Game {
             match mouse_state {
                 MouseState::Left | MouseState::Both => {
                     self.selected_cell_index.set(Some(index));
+                    self.set_cell_highlight(index, true, true);
                 },
                 MouseState::Right => {
                     self.handle_right_click(index);
@@ -417,10 +418,13 @@ impl Game {
                     return;
                 }
 
-                let selected_cell_index = self.selected_cell_index.get();
-                if selected_cell_index != Some(index) {
-                    self.face.set(Face::Happy);
-                    return;
+                if let Some(selected_cell_index) = self.selected_cell_index.get() {
+                    if selected_cell_index != index {
+                        self.mouse_state.set(new_mouse_state);
+                        self.face.set(Face::Happy);
+                        self.set_cell_highlight(selected_cell_index, false, true);
+                        return;
+                    }
                 }
 
                 let chord_setting = self.settings.with(|s| s.chord_setting());
@@ -434,16 +438,37 @@ impl Game {
                 } else {
                     self.handle_click(index);
                 }
+                self.set_cell_highlight(index, false, true);
             },
             MouseState::Right => {
                 self.mouse_state.set(new_mouse_state);
                 self.face.set(Face::Happy);
             },
             MouseState::Both => {
+                if let Some(selected_cell_index) = self.selected_cell_index.get() {
+                    if selected_cell_index != index {
+                        self.mouse_state.set(new_mouse_state);
+                        self.set_cell_highlight(selected_cell_index, false, true);
+                        return;
+                    }
+                }
                 self.handle_chord(index);
+                self.set_cell_highlight(index, false, true);
                 self.mouse_state.set(new_mouse_state);
             }
         }
+    }
+
+    pub fn handle_mouse_leave(&self) {
+        // Note: This is called from a raw DOM event listener (wasm_bindgen Closure),
+        // so we must use untracked variants to avoid reactive context warnings.
+        if !self.active.get_untracked() { return; }
+
+        if let Some(selected_cell_index) = self.selected_cell_index.get_untracked() {
+            self.set_cell_highlight(selected_cell_index, false, false);
+        }
+        self.mouse_state.set(MouseState::Neither);
+        self.face.set(Face::Happy);
     }
 
     fn check_for_win(&self) {
@@ -467,6 +492,49 @@ impl Game {
             with! { |mine_inds, g|
                 for &index in mine_inds.iter() {
                     g[index].update(|cell| cell.set_display_to_flagged());
+                }
+            }
+        });
+    }
+
+    fn set_cell_highlight(&self, index: usize, highlighted: bool, tracked: bool) {
+        batch(|| {
+            let mut is_flagged = false;
+            let mut is_shown = false;
+
+            let update_cell = |g: &Vec<RwSignal<Cell>>| {
+                g[index].update(|c| {
+                    is_flagged = c.is_flagged();
+                    is_shown = c.is_shown();
+                    if !is_flagged { c.set_highlighted(highlighted) }
+                })
+            };
+
+            if tracked {
+                self.grid.with(update_cell);
+            } else {
+                self.grid.with_untracked(update_cell);
+            }
+
+            if is_flagged || !is_shown { return; }
+
+            let neighbors = if tracked {
+                self.neighbors.with(|n| n[index].clone())
+            } else {
+                self.neighbors.with_untracked(|n| n[index].clone())
+            };
+
+            for neighbor_index in neighbors {
+                let update_neighbor = |g: &Vec<RwSignal<Cell>>| {
+                    g[neighbor_index].update(|c| {
+                        if !c.is_flagged() { c.set_highlighted(highlighted) }
+                    })
+                };
+
+                if tracked {
+                    self.grid.with(update_neighbor);
+                } else {
+                    self.grid.with_untracked(update_neighbor);
                 }
             }
         });
