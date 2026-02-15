@@ -1,5 +1,3 @@
-// use gloo_console as console;
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Value {
     Mine,
@@ -15,7 +13,7 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn get_name_string(&self) -> String {
+    pub fn name_string(&self) -> String {
         match self {
             Value::Mine     => String::from(""),
             Value::Zero     => String::from(""),
@@ -40,7 +38,7 @@ pub enum DisplayState {
 }
 
 impl DisplayState {
-    pub fn get_display_string(&self) -> &str {
+    pub fn display_string(&self) -> String {
         match self {
             DisplayState::Default => " ",
             DisplayState::Flagged => "🚩",
@@ -59,7 +57,7 @@ impl DisplayState {
                     Value::Eight    => "8",
                 }
             }
-        }
+        }.into()
     }
 }
 
@@ -68,6 +66,8 @@ pub struct Cell {
     value: Value,
     display: DisplayState,
     color: String,
+    is_first_clicked_mine: bool,
+    highlighted: bool,
 }
 
 impl Cell {
@@ -78,6 +78,8 @@ impl Cell {
             value,
             display: DisplayState::Default,
             color: "".to_string(),
+            is_first_clicked_mine: false,
+            highlighted: false,
         }
     }
 
@@ -92,6 +94,8 @@ impl Cell {
     pub fn reset(&mut self) {
         self.set_value(Value::Zero);
         self.set_display(DisplayState::Default);
+        self.is_first_clicked_mine = false;
+        self.highlighted = false;
     }
 
     pub fn handle_click(&mut self) {
@@ -134,19 +138,34 @@ impl Cell {
         self.value == Value::Zero
     }
 
-
     pub fn set_display_to_flagged(&mut self) {
         self.set_display(DisplayState::Flagged);
     }
 
-    pub fn get_value_display_string(&self) -> &str {
-        self.display.get_display_string()
+    pub fn value_display_string(&self) -> String {
+        self.display.display_string()
+    }
+
+    pub fn mark_as_first_clicked_mine(&mut self) {
+        self.is_first_clicked_mine = true;
+    }
+
+    pub fn is_first_clicked_mine(&self) -> bool {
+        self.is_first_clicked_mine
+    }
+
+    pub fn is_highlighted(&self) -> bool {
+        self.highlighted
+    }
+
+    pub fn set_highlighted(&mut self, highlighted: bool) {
+        self.highlighted = highlighted;
     }
 
     // Private methods
     fn set_display(&mut self, display: DisplayState) {
         self.display = display;
-        self.color = if self.is_shown() { self.value.get_name_string() } else { "".to_string() };
+        self.color = if self.is_shown() { self.value.name_string() } else { "".to_string() };
     }
 
     fn set_value(&mut self, value: Value) {

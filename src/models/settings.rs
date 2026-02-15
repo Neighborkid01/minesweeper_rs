@@ -14,7 +14,7 @@ impl Default for Dimensions {
 }
 
 impl Dimensions {
-    pub fn new(width: usize, height: usize, mines: usize) -> Self { // This should not stay public
+    fn new(width: usize, height: usize, mines: usize) -> Self {
         let w = if width  > MAX_WIDTH  { MAX_WIDTH }  else { width };
         let h = if height > MAX_HEIGHT { MAX_HEIGHT } else { height };
         let m = if mines  > MAX_MINES  { MAX_MINES }  else { mines };
@@ -34,20 +34,17 @@ impl Dimensions {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
 pub enum Difficulty {
+    #[default]
     Beginner,
     Intermediate,
     Expert,
     Custom(Dimensions),
 }
 
-impl Default for Difficulty {
-    fn default() -> Self { Difficulty::Beginner }
-}
-
 impl Difficulty {
-    fn dimensions(&self) -> Dimensions {
+    pub fn dimensions(&self) -> Dimensions {
         match self {
             Difficulty::Beginner => { Dimensions::new(9, 9, 10) },
             Difficulty::Intermediate => { Dimensions::new(16, 16, 40) },
@@ -64,9 +61,12 @@ impl Difficulty {
             Difficulty::Custom(_) => { "Custom".into() },
         }
     }
+
+    fn matches(&self, difficulty: &Difficulty) -> bool {
+        std::mem::discriminant(self) == std::mem::discriminant(difficulty)
+    }
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct DifficultySetting {
     difficulty: Difficulty,
@@ -97,29 +97,23 @@ impl DifficultySetting {
     }
 }
 
-#[allow(dead_code)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
 pub enum ChordSetting {
+    #[default]
     LeftClick,
     LeftAndRightClick,
     Disabled,
 }
 
-impl Default for ChordSetting {
-    fn default() -> Self { ChordSetting::LeftClick }
-}
 
-#[allow(dead_code)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
 pub enum FirstClickSetting {
     Any,
     Safe,
+    #[default]
     Zero,
 }
 
-impl Default for FirstClickSetting {
-    fn default() -> Self { FirstClickSetting::Zero }
-}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Settings {
@@ -170,6 +164,10 @@ impl Settings {
 
     pub fn set_difficulty(&mut self, difficulty: Difficulty) {
         self.difficulty_setting.set_difficulty(difficulty);
+    }
+
+    pub fn difficulty_matches(&self, difficulty: &Difficulty) -> bool {
+        self.difficulty_setting.difficulty().matches(difficulty)
     }
 }
 

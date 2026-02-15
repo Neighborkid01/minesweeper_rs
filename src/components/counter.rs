@@ -1,16 +1,12 @@
-use yew::prelude::*;
+use leptos::*;
 
-#[derive(Properties, PartialEq)]
-pub struct CounterProps {
-    pub value: isize,
-    pub classes: String
-}
-
-#[function_component(Counter)]
-pub fn counter(CounterProps { value, classes }: &CounterProps) -> Html {
-    html! {
-        <div class={classes!("counter", classes)}>
-            <span id="timer">{ format!("{:0>3}", value) }</span>
+#[component]
+pub fn Counter(
+    value: impl Fn() -> isize + 'static,
+) -> impl IntoView {
+    view! {
+        <div class="counter">
+            <span id="timer">{ move || format!("{:0>3}", value()) }</span>
         </div>
     }
 }
